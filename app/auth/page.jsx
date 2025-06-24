@@ -27,7 +27,8 @@ function Login() {
             className='w-[140px] h-auto object-contain' 
             priority
           />
-        </div>        <div className='w-full py-4 px-4 flex justify-center '>
+        </div>       
+         <div className='w-full py-4 px-4 flex justify-center '>
           <Image  
             src="/Login.png" 
             alt="Login" 
