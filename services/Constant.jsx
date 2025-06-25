@@ -8,7 +8,7 @@ export const SidebarConstant =[
         path: "/dashboard",
     },
     {
-        name: "ScheduledInterviews",
+        name: "Scheduled Interviews",
         icon: Calendar,
         path: "/scheduled-interviews",
     },

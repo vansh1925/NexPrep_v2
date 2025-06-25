@@ -6,13 +6,16 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 function DashboardProvider({children}) {
   return (
     <SidebarProvider>
-      <div>
+      <div className="flex">
         <AppSidebar />
-        <div>
-            <SidebarTrigger>
+        <div className="flex-1 relative">
+            <div className="absolute top-4 left-4">
+              <SidebarTrigger />
+            </div>
+            <div className="pt-6 w-full">
               {children}
-            </SidebarTrigger>
-          </div>
+            </div>
+        </div>
       </div>
     </SidebarProvider>
   )

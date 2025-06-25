@@ -3,7 +3,7 @@ import { UserDetailContext } from '@/context/UserDetail.context';
 import { supabase } from '@/services/supabaseClient'
 import React, { useEffect } from 'react'
 
-function Provider() {
+function Provider({ children }) {
     const [user, setUser] = React.useState(null);
     useEffect(() => {
         console.log('Provider component mounted');
@@ -60,22 +60,22 @@ function Provider() {
                 console.log('New user created successfully:', insertData);
                 setUser(insertData[0]);
             } else {
-                console.log('User already exists, not creating a new one');
+                console.log('User already exists, setting user data:', Users[0]);
+                setUser(Users[0]);
             }
         }).catch(err => {
             console.error('Unexpected error in CreateNewUser:', err);
         });
     }
-    
-    return (
+      return (
         <UserDetailContext.Provider value={{ user, setUser }}>
-            <div>provider</div>
+            {children}
         </UserDetailContext.Provider>
     )
-}
+}   
 
 export default Provider
-export const userUser= () => {
+export const useUser= () => {
     const context = React.useContext(UserDetailContext);
 
     return context;

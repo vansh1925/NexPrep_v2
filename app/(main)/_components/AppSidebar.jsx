@@ -26,7 +26,8 @@ export function AppSidebar() {
           <span>Create New Interview</span>
         </Button>
       </SidebarHeader>
-      <SidebarContent>        <SidebarGroup>
+      <SidebarContent>      
+        <SidebarGroup>
           <SidebarMenu>
             {SidebarConstant && SidebarConstant.map((option, index) => (
               <SidebarMenuItem key={index}>
