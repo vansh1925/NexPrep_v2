@@ -4,10 +4,10 @@ import Provider from '../provider'
 
 function DashboardLayout({children}) {
   return (
-    <div>
+    <div className="w-full">
         <Provider>
           <DashboardProvider>
-            <div className='p-10 w-full'>
+            <div className='pt-4 w-full'>
               {children}
             </div>
           </DashboardProvider>
