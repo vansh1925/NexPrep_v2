@@ -177,7 +177,7 @@ function CreateInterview() {
           job_position: formData.jobPosition,
           job_description: formData.jobDescription,
           experience_level: formData.experienceLevel,
-          interview_decription: parseInt(formData.interviewDuration) || 30,
+          interview_time: parseInt(formData.interviewDuration) || 30,
           interview_type: Array.isArray(formData.interviewType) 
             ? formData.interviewType.join(', ') 
             : formData.interviewType,
