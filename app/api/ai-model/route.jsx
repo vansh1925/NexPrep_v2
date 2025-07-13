@@ -17,7 +17,7 @@ export async function POST(req) {
         
         // Make request to the AI model
         const completion = await openai.chat.completions.create({
-            model: "deepseek/deepseek-v3-base:free",
+            model: "google/gemini-2.0-flash-exp:free",
             messages: [
                 { role: "system", content: "You are an expert technical interviewer designed to create relevant interview questions based on job requirements." },
                 { role: "user", content: prompt }

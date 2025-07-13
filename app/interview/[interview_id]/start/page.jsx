@@ -1,10 +1,14 @@
 "use client";
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';     
-import { Clock, Mic, MicOff, Camera, CameraOff, PhoneOff, Volume2, VolumeX, User, MessageSquare } from 'lucide-react';
+import { Clock, Mic, MicOff, Camera, CameraOff, PhoneOff, Volume2, VolumeX, MessageSquare, Axis3DIcon } from 'lucide-react';
 import Image from 'next/image';
 import { InterviewDetailsContext } from '@/context/InterviewDetails.context';
 import { useUser } from '@/app/provider';
+import Vapi from '@vapi-ai/web';
+import { supabase } from '@/services/supabaseClient';
+
+let vapiInstance = null;
 
 function Interview() {
   const { interview_id } = useParams();
@@ -20,71 +24,84 @@ function Interview() {
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [isSpeakerOff, setIsSpeakerOff] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [isCallActive, setIsCallActive] = useState(false);
+  const [isTimerActive, setIsTimerActive] = useState(false);
 
-  // Set a safety timeout to prevent infinite loading
+  const [Conversation, setConversation] = useState([]);
+
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (loading) {
-        console.log("Loading timeout reached, attempting recovery...");
-        
-        // Try to recover data from localStorage
-        try {
-          const savedData = localStorage.getItem('interview_data');
-          if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            setInterviewData(parsedData);
-            console.log("Recovered data from localStorage");
-          } else {
-            setLoading(false);
-            setLoadError(true);
-          }
-        } catch (e) {
-          console.error("Error recovering data:", e);
-          setLoading(false);
-          setLoadError(true);
-        }
-      }
-    }, 5000); // 5 seconds timeout
-
-    return () => clearTimeout(timeoutId);
-  }, [loading, setInterviewData]);
-
-  // When interview data is available, save to localStorage as backup
-  useEffect(() => {
-    console.log("Interview data:", interviewData);
-    
     if (interviewData) {
       setLoading(false);
       
-      // Save to localStorage for recovery
-      try {
-        localStorage.setItem('interview_data', JSON.stringify(interviewData));
-      } catch (e) {
-        console.error("Error saving to localStorage:", e);
+      // Initialize VAPI if it doesn't exist yet
+      if (!vapiInstance) {
+        try {
+          vapiInstance = new Vapi(process.env.NEXT_PUBLIC_VAPI_KEY);
+          
+          // Set up basic event listeners
+          vapiInstance.on('call-start', () =>{
+            console.log("Call has started");
+            setIsCallActive(true);
+            setIsTimerActive(true);
+          }); 
+          vapiInstance.on('call-end', () => {
+            console.log("Call has ended");
+            setIsCallActive(false);
+            setIsTimerActive(false);
+            
+
+          });
+          vapiInstance.on('error', (error) => console.error("VAPI error:", error));
+
+          
+        }
+        catch (error) {
+            console.error("Error initializing VAPI:", error);
+            setLoadError(true);
+        }
       }
+    } else {
+      // Show error after timeout if data doesn't load
+      const timeoutId = setTimeout(() => {
+        if (!interviewData) {
+          setLoadError(true);
+          setLoading(false);
+        }
+      }, 5000);
+      
+      return () => clearTimeout(timeoutId);
     }
+    
+    // Clean up VAPI on component unmount
+    return () => {
+      if (vapiInstance && isCallActive) {
+        try {
+          vapiInstance.stop();
+        } catch (e) {
+          console.error("Error stopping VAPI:", e);
+        }
+      }
+    };
   }, [interviewData]);
 
-  // Extract questions with safety check
-  const questions = interviewData?.interviewData?.interview_questions || [];
-
-  // Timer effect with fixed initial value
-  const [time, setTime] = useState(30 * 60); // Default 30 minutes
+  // Extract questions from interview data
+  const questions = interviewData?.interviewData?.interview_questions?.map(q => q.question) || [];
   
-  // Update timer when interview data is available
+  // Timer logic
+  const [time, setTime] = useState(30 * 60);
+  
   useEffect(() => {
     if (interviewData?.interviewData?.interview_time) {
       setTime(interviewData.interviewData.interview_time * 60);
     }
   }, [interviewData]);
 
-  // Timer countdown effect
   useEffect(() => {
+    if (!isTimerActive || time <= 0) return;
     const timer = time > 0 && setInterval(() => setTime(time - 1), 1000);
     return () => clearInterval(timer);
-  }, [time]);
+  }, [time,isTimerActive]);
 
-  // Format time as MM:SS
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -93,29 +110,142 @@ function Interview() {
   
   const userName = interviewData?.username;
 
-  const handleEndCall = () => {
+
+
+  // Simple function to start the VAPI call
+  const startCall = () => {
+    if (!interviewData || !vapiInstance) {
+      console.error("Cannot start call: missing interview data or VAPI not initialized");
+      return;
+    }
+    
+    try {
+      const assistantOptions = {
+        name: "AI Interviewer",
+        firstMessage: `Hi ${userName || "there"}, ready for your interview?`,
+        transcriber: {
+          provider: "deepgram",
+          model: "nova-2",
+          language: "en-US",
+        },
+        voice: {
+          provider: "playht",
+          voiceId: "jennifer",
+        },
+        model: {
+          provider: "openai",
+          model: "gpt-4",
+          messages: [
+            {
+              role: "system",
+              content: `You are an AI voice assistant conducting interviews.
+Your job is to ask candidates provided interview questions, assess their responses,
+Begin the conversation with a friendly introduction, setting a relaxed yet professional tone. Example:
+"Hey there! Welcome to your ${interviewData?.interviewData?.job_position || "Software Development"} interview. Let's get started with a few questions!"
+Ask one question at a time and wait for the candidate's response before proceeding. Keep the questions clear and concise. Below Are the questions:
+${JSON.stringify(questions)}
+If the candidate struggles, offer hints or rephrase the question without giving away the answer. Example:
+"Need a hint? Think about how React tracks component updates!"
+Provide brief, encouraging feedback after each answer. Example:
+"Nice! That's a solid answer."
+"Hmm, not quite! Want to try again?"
+Keep the conversation natural and engaging—use casual phrases like "Alright, next up..." or "Let's tackle a tricky one!"
+After 5-7 questions, wrap up the interview smoothly by summarizing their performance. Example:
+"That was great! You handled some tough questions well. Keep sharpening your skills!"
+End on a positive note:
+"Thanks for chatting! Hope to see you crushing projects soon!"
+Key Guidelines:
+✅ Be friendly, engaging, and witty
+✅ Keep responses short and natural, like a real conversation
+✅ Adapt based on the candidate's confidence level
+✅ Ensure the interview remains focused on ${interviewData?.interviewData?.job_position || "Software Development"}`
+            }
+          ]
+        }
+      };
+      
+      // Start the call
+      vapiInstance.start(assistantOptions);
+      vapiInstance.on('message', (message) => {
+        console.log("Received message:", message?.conversation);
+        if (message?.conversation) {
+          setConversation(prev => [...prev, ...message.conversation]);
+        }
+      });
+    } catch (error) {
+      console.error("Error starting VAPI call:", error);
+    }
+  };
+
+
+  // Simple function to end the call
+  const handleEndCall =async  () => {
     if (confirm('Are you sure you want to end this interview?')) {
-      router.push(`/interview/${interview_id}/feedback`);
+      try {
+        if (vapiInstance) {
+          vapiInstance.stop();
+        }
+        await GenerateFeedback();
+        router.push(`/interview/${interview_id}/feedback`);
+
+      } catch (error) {
+        console.error("Error stopping VAPI call:", error);
+        router.push(`/interview/${interview_id}/feedback`);
+
+      }
+    }
+  };
+  const GenerateFeedback = async () => {
+    if (!interviewData || !vapiInstance) {
+      console.error("Cannot generate feedback: missing interview data or VAPI not initialized");
+      return;
+    }
+    try {
+      const result = await fetch('/api/ai-feedback', {
+        method: 'POST',
+        headers: {
+        'Content-Type': 'application/json', 
+      },
+        body: JSON.stringify({
+          conversation: Conversation
+          
+        }),
+      });
+      const data = await result.json(); // Parse response
+      console.log("Feedback received:", data);
+      const { feedback, error } = await supabase
+      .from('postinterview')
+      .insert([
+        { interview_id: interviewData?.interviewData?.interview_id  , interview_review: data },
+      ])
+        
+    } catch (error) {
+      console.error("Error generating feedback:", error);
     }
   };
 
-  const handleNextQuestion = () => {
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
+  // Simple function to toggle microphone
+  const handleMicToggle = () => {
+    try {
+      if (vapiInstance) {
+        if (isMuted) {
+          vapiInstance.mic.unmute();
+        } else {
+          vapiInstance.mic.mute();
+        }
+        setIsMuted(!isMuted);
+      }
+    } catch (error) {
+      console.error("Error toggling microphone:", error);
     }
   };
 
-  const handlePrevQuestion = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1);
-    }
-  };
-
-  // Handle going back to previous page
+  // Handle going back
   const handleGoBack = () => {
     router.push(`/interview/${interview_id}`);
   };
 
+  // Loading state
   if (loading) {
     return (
       <div className="bg-gradient-to-b from-gray-900 to-gray-800 min-h-screen flex items-center justify-center">
@@ -127,6 +257,7 @@ function Interview() {
     );
   }
 
+  // Error state
   if (loadError || !interviewData) {
     return (
       <div className="bg-gradient-to-b from-gray-900 to-gray-800 min-h-screen flex items-center justify-center p-4">
@@ -153,12 +284,12 @@ function Interview() {
     );
   }
 
+  // Main UI
   return (
     <div className="bg-gradient-to-b from-gray-900 to-gray-800 min-h-screen text-white">
       {/* Header with timer and controls */}
       <div className="bg-gray-800 p-4 shadow-md flex items-center justify-between">
         <div className="flex items-center">
-          
           <span className="ml-3 text-lg font-medium hidden md:inline">
             {interviewData?.interviewData?.job_position || 'Interview'} - {userName}
           </span>
@@ -201,17 +332,27 @@ function Interview() {
                 <p className="text-lg font-medium">AI Interviewer</p>
                 <p className="text-sm text-gray-400">NexPrep Assistant</p>
                 
-                {/* Display current question here instead of in a separate box
-                {questions.length > 0 && (
-                  <div className="mt-6 max-w-md mx-auto bg-gray-700/50 p-4 rounded-lg border border-gray-600">
-                    <p className="text-base text-gray-100">"{questions[currentQuestion]?.question || "Let's begin with the interview."}"</p>
+                {/* Call controls */}
+                {isCallActive ? (
+                  <div className="mt-3 flex items-center justify-center">
+                    <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse mr-2"></span>
+                    <span className="text-sm text-green-300">Call active</span>
                   </div>
-                )} */}
+                ) : (
+                  <button 
+                    onClick={startCall}
+                    className="mt-4 bg-primary hover:bg-primary/90 text-white py-2 px-4 rounded-lg flex items-center mx-auto"
+                  >
+                    <Mic className="mr-2 h-4 w-4" />
+                    Start Interview
+                  </button>
+                )}
               </div>
               <div className="absolute bottom-4 left-4 bg-black bg-opacity-60 px-3 py-1 rounded-md text-sm">
                 AI Interviewer
               </div>
             </div>
+            
             {/* User video */}
             <div className="relative bg-gray-700 rounded-xl overflow-hidden flex-1 flex items-center justify-center">
               {isCameraOff ? (
@@ -224,6 +365,10 @@ function Interview() {
                         width={140} 
                         height={140} 
                         className="object-cover h-full w-full"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "/default-avatar.png"; 
+                        }}
                       />
                     ) : (
                       <div className="h-full w-full flex items-center justify-center bg-gray-600">
@@ -247,6 +392,10 @@ function Interview() {
                           width={140} 
                           height={140} 
                           className="object-cover h-full w-full"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "/default-avatar.png";
+                          }}
                         />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center bg-gray-600">
@@ -264,11 +413,20 @@ function Interview() {
               </div>
             </div>
           </div>
+          
+          {/* Display current question
+          {questions.length > 0 && (
+            <div className="mt-4 max-w-2xl mx-auto bg-gray-700/50 p-3 rounded-lg border border-gray-600">
+              <p className="text-center text-base text-gray-100">"{questions[currentQuestion] || "Let's begin with the interview."}"</p>
+            </div>
+          )} */}
+          
           {/* Controls */}
           <div className="mt-6 flex items-center justify-center space-x-6">
             <button 
-              onClick={() => setIsMuted(!isMuted)}
+              onClick={handleMicToggle}
               className={`p-4 rounded-full ${isMuted ? 'bg-red-500' : 'bg-gray-600 hover:bg-gray-500'}`}
+              disabled={!isCallActive}
             >
               {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
             </button>
@@ -290,13 +448,14 @@ function Interview() {
             <button 
               onClick={() => setIsSpeakerOff(!isSpeakerOff)}
               className={`p-4 rounded-full ${isSpeakerOff ? 'bg-red-500' : 'bg-gray-600 hover:bg-gray-500'}`}
+              disabled={!isCallActive}
             >
               {isSpeakerOff ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
             </button>
           </div>
         </div>
         
-        {/* Chat sidebar (conditionally shown) */}
+        {/* Chat sidebar */}
         {showChat && (
           <div className="md:w-1/3 bg-gray-800 p-4 border-l border-gray-700 h-full overflow-hidden flex flex-col">
             <h3 className="text-lg font-medium mb-4">Interview Chat</h3>
@@ -313,7 +472,7 @@ function Interview() {
               </div>
               
               <div className="bg-primary/20 p-3 rounded-lg max-w-[85%]">
-                <p className="text-sm">{questions[currentQuestion]?.question || "Let's begin with the first question."}</p>
+                <p className="text-sm">{questions[currentQuestion] || "Let's begin with the first question."}</p>
                 <p className="text-xs text-gray-400 mt-1">AI Interviewer, just now</p>
               </div>
             </div>

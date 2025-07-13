@@ -61,17 +61,17 @@ function Interview() {
     
     console.log("Interview data fetched:", Interviewdata);
     
-    await setInterviewData({
+    setInterviewData({
       username: name,
       interviewData: Interviewdata[0]
     });
-    console.log("Interview data set in context");
+    console.log("Interview data set in context", interviewData);
     // Short delay to ensure context updates before navigation
     setTimeout(() => {
       // Then navigate to the next page
       router.push(`/interview/${interview_id}/start`);
-    }, 100);
-    
+    }, 300);
+    console.log("Interview data set in context", interviewData);
   } catch (error) {
     console.error("Error in handleStartInterview:", error);
     setLoading(false);
