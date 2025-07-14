@@ -107,7 +107,7 @@ nexprep_v2/
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/nexprep.git
+   git clone https://github.com/vansh1925/NexPrep_v2
    cd nexprep_v2
    ```
 
@@ -142,7 +142,7 @@ nexprep_v2/
    ```
 
 6. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+   Navigate to [https://nexprep-v2.vercel.app/]
 
 ## 📖 Usage Guide
 
@@ -273,10 +273,7 @@ POST /api/ai-feedback
 
 ## 📞 Support & Contact
 
-- **Documentation**: [docs.nexprep.com](https://docs.nexprep.com)
-- **Support Email**: support@nexprep.com
-- **Community**: [Discord Server](https://discord.gg/nexprep)
-- **Bug Reports**: [GitHub Issues](https://github.com/yourusername/nexprep/issues)
+- **Support Email**: vworkp625@gmail.com
 
 ## 📄 License
 
@@ -305,10 +302,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 🚀 Initial platform launch
 - 👤 User authentication
 - 📝 Basic interview creation
-- 📈 Simple feedback system
+- ✨ AI-powered question generation
 
 ---
 
-**Made with ❤️ by the NexPrep Team**
+**Made with ❤️ by the Vansh Puri(https://github.com/vansh1925)**
 
 _Empowering careers through intelligent interview preparation_
