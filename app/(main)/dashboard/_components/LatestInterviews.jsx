@@ -138,9 +138,9 @@ function LatestInterviews() {
       <div className='flex items-center justify-between mb-4'>
         <h2 className='text-2xl font-bold'>Previously Created Interviews</h2>
         <Button 
-          onClick={() => router.push('/interview')}
-          className="flex items-center gap-2"
-        >
+            onClick={() => router.push(`/dashboard/create-interview`)}
+            className='flex items-center gap-2 cursor-pointer'
+          >
           <Plus className="w-4 h-4" />
           Create New Interview
         </Button>
@@ -156,8 +156,8 @@ function LatestInterviews() {
             Start your interview preparation journey by creating your first interview
           </p>
           <Button 
-            onClick={() => router.push('/interview')}
-            className='flex items-center gap-2'
+            onClick={() => router.push(`/interview/${interviewId}`)}
+            className='flex items-center gap-2 cursor-pointer'
           >
             <Plus className="w-4 h-4" />
             Create New Interview

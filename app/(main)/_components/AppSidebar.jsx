@@ -16,16 +16,15 @@ import { SidebarConstant } from "@/services/Constant.jsx"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 
+
 export function AppSidebar() {
   const path=usePathname()
+
   return (
     <Sidebar collapsible="offcanvas">      
       <SidebarHeader className="flex flex-col items-center gap-4 py-4 px-3">
         <Image src="/NexprepLogo.png" width={150} height={80} alt="Logo" className="h-auto w-[150px]" />
-        <Button className="w-full flex items-center gap-2">
-          <Plus size={16} />
-          <span>Create New Interview</span>
-        </Button>
+
       </SidebarHeader>
       <SidebarContent>      
         <SidebarGroup>
