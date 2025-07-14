@@ -230,7 +230,7 @@ function CreateInterview() {
           // Deduct 1 credit from user
           try {
             const { error: creditError } = await supabase
-              .from('users')
+              .from('Users')
               .update({ 
                 credits: user.user.credits - 1 
               })
@@ -286,7 +286,7 @@ function CreateInterview() {
               </span>
               {(user.user.credits || 0) <= 0 && (
                 <button 
-                  onClick={() => router.push('/dashboard/billing')}
+                  onClick={() => router.push('/billing')}
                   className='text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700'
                 >
                   Add Credits

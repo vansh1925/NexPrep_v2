@@ -18,14 +18,14 @@ function CreateOptions() {
         </div>
       </Link>
 
-      <Link href='/dashboard/generate-questions' className='bg-white border border-gray-200 p-6 rounded-lg hover:shadow-lg transition-shadow duration-200'>
+      <Link href='/dashboard/practice' className='bg-white border border-gray-200 p-6 rounded-lg hover:shadow-lg transition-shadow duration-200'>
         <div className='flex items-start gap-4'>
           <div className='flex-shrink-0'>
             <Notebook className='p-3 text-primary bg-blue-50 rounded-lg h-14 w-14' />
           </div>
           <div>
-            <h2 className='text-xl font-bold text-gray-800 mb-1'>Generate Interview Questions</h2>
-            <p className='text-gray-500'>Create role-specific interview questions using AI</p>
+            <h2 className='text-xl font-bold text-gray-800 mb-1'>NexPrep Vault</h2>
+            <p className='text-gray-500'>A curated vault of high-quality resources to help you level up your interview prep, coding skills, and career journey</p>
           </div>
         </div>
       </Link>
