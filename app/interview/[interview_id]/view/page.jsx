@@ -101,7 +101,7 @@ function ViewInterview() {
   };
 
   const startInterview = () => {
-    router.push(`/interview/${interviewId}/start`);
+    router.push(`/interview/${interviewId}`);
   };
 
   const getRecommendationColor = (recommendation) => {

@@ -156,7 +156,7 @@ function LatestInterviews() {
             Start your interview preparation journey by creating your first interview
           </p>
           <Button 
-            onClick={() => router.push(`/interview/${interviewId}`)}
+            onClick={() => router.push('dashboard/create-interview')}
             className='flex items-center gap-2 cursor-pointer'
           >
             <Plus className="w-4 h-4" />
