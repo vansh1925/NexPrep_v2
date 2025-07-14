@@ -16,12 +16,17 @@ import {
   X,
   MessageSquare,
   Clock,
-  TrendingUp
+  TrendingUp,
+  CreditCard,
+  Infinity
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
+import Image from 'next/image';
+
 export default function LandingPage() {
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
 
@@ -89,49 +94,69 @@ export default function LandingPage() {
     { number: "4.9/5", label: "User Rating" }
   ];
 
-  const pricingPlans = [
+  const creditPacks = [
     {
-      name: "Free",
-      price: "$0",
-      period: "forever",
-      description: "Perfect for getting started",
+      name: "Starter Pack",
+      credits: 5,
+      price: "₹99",
+      description: "Perfect for casual prep",
       features: [
-        "5 AI-generated questions per month",
-        "Basic progress tracking",
-        "Access to resource library",
-        "Community support"
+        "5 AI-powered mock interviews",
+        "Voice-based interaction",
+        "Instant feedback & analysis",
+        "Basic progress tracking"
       ],
-      popular: false
+      popular: false,
+      color: "blue"
     },
     {
-      name: "Pro",
-      price: "$19",
-      period: "per month", 
-      description: "Best for serious job seekers",
+      name: "Growth Pack",
+      credits: 15,
+      price: "₹249",
+      description: "Serious interview rounds",
       features: [
-        "Unlimited AI-generated questions",
-        "Mock interview sessions",
+        "15 AI-powered mock interviews",
+        "Advanced voice interaction",
+        "Detailed feedback reports",
+        "Progress analytics",
+        "Interview history access"
+      ],
+      popular: true,
+      color: "purple"
+    },
+    {
+      name: "Pro Pack",
+      credits: 30,
+      price: "₹449",
+      description: "Intensive practice + review",
+      features: [
+        "30 AI-powered mock interviews",
+        "Premium voice features",
+        "Expert-level feedback",
         "Advanced analytics",
-        "Resume optimization",
         "Priority support",
-        "Industry-specific prep"
+        "Performance insights"
       ],
-      popular: true
+      popular: false,
+      color: "green"
     },
     {
-      name: "Team",
-      price: "$49",
-      period: "per month",
-      description: "Perfect for teams and bootcamps",
+      name: "Unlimited Plan",
+      credits: "∞",
+      price: "₹699",
+      period: "/month",
+      description: "Daily interviews, no limits",
       features: [
-        "Everything in Pro",
-        "Team dashboard",
-        "Bulk user management",
-        "Custom branding",
-        "Dedicated support",
-        "API access"
+        "Unlimited mock interviews",
+        "All premium features",
+        "Daily practice sessions",
+        "Expert coaching insights",
+        "Priority support",
+        "Advanced AI models"
       ],
-      popular: false
+      popular: false,
+      color: "gradient",
+      isUnlimited: true
     }
   ];
 
@@ -143,9 +168,7 @@ export default function LandingPage() {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                NexPrep
-              </div>
+              <Image src="/NexprepLogo.png" alt="NexPrep Logo" width={120} height={40} />
             </div>
 
             {/* Desktop Navigation */}
@@ -153,16 +176,16 @@ export default function LandingPage() {
               <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a>
               <a href="#demo" className="text-gray-600 hover:text-gray-900 transition-colors">Demo</a>
               <a href="#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors">Reviews</a>
-              <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
-              <Link href="/dashboard" className="text-gray-600 hover:text-gray-900 transition-colors">
-                Dashboard
-              </Link>
-              <Link href="/dashboard">
+              <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Credits</a>
+
+              
+              <Link href="/auth">
                 <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                   Get Started
                 </Button>
               </Link>
-            </div>
+             
+          </div>
 
             {/* Mobile menu button */}
             <div className="md:hidden">
@@ -183,12 +206,14 @@ export default function LandingPage() {
               <a href="#features" className="block px-3 py-2 text-gray-600 hover:text-gray-900">Features</a>
               <a href="#demo" className="block px-3 py-2 text-gray-600 hover:text-gray-900">Demo</a>
               <a href="#testimonials" className="block px-3 py-2 text-gray-600 hover:text-gray-900">Reviews</a>
-              <a href="#pricing" className="block px-3 py-2 text-gray-600 hover:text-gray-900">Pricing</a>
-              <Link href="/dashboard" className="block px-3 py-2 text-gray-600 hover:text-gray-900">
-                Dashboard
-              </Link>
+              <a href="#pricing" className="block px-3 py-2 text-gray-600 hover:text-gray-900">Credits</a>
+              {user && (
+                <Link href="/dashboard" className="block px-3 py-2 text-gray-600 hover:text-gray-900">
+                  Dashboard
+                </Link>
+              )}
               <div className="px-3 py-2">
-                <Link href="/dashboard">
+                <Link href="/auth">
                   <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600">
                     Get Started
                   </Button>
@@ -225,7 +250,7 @@ export default function LandingPage() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link href="/dashboard">
+              <Link href="/auth">
                 <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-4">
                   Start Free Trial
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -420,79 +445,135 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* Credits Pricing Section */}
       <section id="pricing" className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
+            <div className="inline-flex items-center px-4 py-2 bg-green-100 rounded-full text-green-700 text-sm font-medium mb-6">
+              <CreditCard className="w-4 h-4 mr-2" />
+              🎟️ Interview Credits
+            </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Choose Your
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Success Plan</span>
+              Practice Makes
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Perfect!</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Start free and upgrade as you grow. All plans include our core features to help you succeed.
+            <p className="text-xl text-gray-600 max-w-4xl mx-auto mb-8">
+              NexPrep uses a credit-based system to give you AI-powered interview experiences.
             </p>
+            
+            {/* Credit System Info */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
+              <div className="flex items-center justify-center gap-3 bg-white rounded-xl p-4 shadow-sm">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+                <span className="text-gray-700 font-medium">Every new user gets <strong>3 free interviews</strong></span>
+              </div>
+              <div className="flex items-center justify-center gap-3 bg-white rounded-xl p-4 shadow-sm">
+                <Clock className="w-6 h-6 text-blue-500" />
+                <span className="text-gray-700 font-medium">Once they're used, you can <strong>buy more credits</strong></span>
+              </div>
+              <div className="flex items-center justify-center gap-3 bg-white rounded-xl p-4 shadow-sm">
+                <CreditCard className="w-6 h-6 text-purple-500" />
+                <span className="text-gray-700 font-medium">Pay only for what you use — <strong>no hidden charges</strong></span>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {pricingPlans.map((plan, index) => (
+          {/* Credit Packs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            {creditPacks.map((pack, index) => (
               <div
                 key={index}
-                className={`relative rounded-2xl p-8 ${
-                  plan.popular
-                    ? 'bg-gradient-to-br from-blue-600 to-purple-600 text-white scale-105'
-                    : 'bg-white border border-gray-200'
+                className={`relative rounded-2xl p-6 ${
+                  pack.popular
+                    ? 'bg-gradient-to-br from-blue-600 to-purple-600 text-white scale-105 shadow-xl'
+                    : pack.isUnlimited
+                    ? 'bg-gradient-to-br from-purple-700 to-pink-600 text-white shadow-xl'
+                    : 'bg-white border border-gray-200 shadow-lg'
                 } hover:shadow-xl transition-all duration-300`}
               >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-yellow-400 text-gray-900 px-4 py-2 rounded-full text-sm font-semibold">
+                {pack.popular && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-yellow-400 text-gray-900 px-3 py-1 rounded-full text-xs font-semibold">
                       Most Popular
                     </span>
                   </div>
                 )}
 
                 <div className="text-center">
-                  <h3 className={`text-2xl font-bold mb-2 ${plan.popular ? 'text-white' : 'text-gray-900'}`}>
-                    {plan.name}
+                  {/* Credits Display */}
+                  <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
+                    pack.isUnlimited 
+                      ? 'bg-white/20' 
+                      : pack.popular 
+                      ? 'bg-white/20' 
+                      : 'bg-gradient-to-br from-blue-500 to-purple-500'
+                  }`}>
+                    {pack.isUnlimited ? (
+                      <Infinity className="w-8 h-8 text-white" />
+                    ) : (
+                      <span className={`text-2xl font-bold ${pack.popular ? 'text-white' : 'text-white'}`}>
+                        {pack.credits}
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className={`text-xl font-bold mb-2 ${pack.popular || pack.isUnlimited ? 'text-white' : 'text-gray-900'}`}>
+                    {pack.name}
                   </h3>
-                  <p className={`mb-6 ${plan.popular ? 'text-blue-100' : 'text-gray-600'}`}>
-                    {plan.description}
+                  <p className={`text-sm mb-4 ${pack.popular || pack.isUnlimited ? 'text-white/80' : 'text-gray-600'}`}>
+                    {pack.description}
                   </p>
+                  
                   <div className="mb-6">
-                    <span className={`text-5xl font-bold ${plan.popular ? 'text-white' : 'text-gray-900'}`}>
-                      {plan.price}
+                    <span className={`text-3xl font-bold ${pack.popular || pack.isUnlimited ? 'text-white' : 'text-gray-900'}`}>
+                      {pack.price}
                     </span>
-                    <span className={`text-lg ${plan.popular ? 'text-blue-100' : 'text-gray-600'}`}>
-                      /{plan.period}
-                    </span>
+                    {pack.period && (
+                      <span className={`text-sm ${pack.popular || pack.isUnlimited ? 'text-white/80' : 'text-gray-600'}`}>
+                        {pack.period}
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                <ul className="space-y-4 mb-8">
-                  {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center">
-                      <CheckCircle className={`h-5 w-5 mr-3 ${plan.popular ? 'text-green-300' : 'text-green-500'}`} />
-                      <span className={plan.popular ? 'text-blue-100' : 'text-gray-600'}>
+                <ul className="space-y-3 mb-6">
+                  {pack.features.map((feature, featureIndex) => (
+                    <li key={featureIndex} className="flex items-start">
+                      <CheckCircle className={`h-4 w-4 mr-2 mt-0.5 flex-shrink-0 ${
+                        pack.popular || pack.isUnlimited ? 'text-white/80' : 'text-green-500'
+                      }`} />
+                      <span className={`text-sm ${pack.popular || pack.isUnlimited ? 'text-white/90' : 'text-gray-600'}`}>
                         {feature}
                       </span>
                     </li>
                   ))}
                 </ul>
 
-                <Link href="/dashboard">
+                <Link href="/auth">
                   <Button
                     className={`w-full ${
-                      plan.popular
+                      pack.popular || pack.isUnlimited
                         ? 'bg-white text-blue-600 hover:bg-gray-100'
                         : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white'
                     }`}
                   >
-                    {plan.name === 'Free' ? 'Get Started' : 'Start Free Trial'}
+                    {pack.isUnlimited ? 'Go Unlimited' : `Get ${pack.credits} Credits`}
                     <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
               </div>
             ))}
+          </div>
+
+          {/* Credit Usage Info */}
+          <div className="mt-12 text-center">
+            <p className="text-gray-600 text-lg mb-4">
+              💡 <strong>Use credits to start a new mock interview</strong> with voice, AI questions, and instant feedback.
+            </p>
+            <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm">
+              <Shield className="w-4 h-4" />
+              <span>All purchases are secure and come with a 7-day money-back guarantee</span>
+            </div>
           </div>
         </div>
       </section>
@@ -508,7 +589,7 @@ export default function LandingPage() {
             and secure positions at top companies.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/dashboard">
+            <Link href="/auth">
               <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-4">
                 Start Your Journey
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -516,8 +597,7 @@ export default function LandingPage() {
             </Link>
             <Button 
               size="lg" 
-              variant="outline" 
-              className="border-white text-white hover:bg-white hover:text-blue-600 text-lg px-8 py-4"
+              className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-4"
               onClick={() => document.getElementById('demo').scrollIntoView({ behavior: 'smooth' })}
             >
               Watch Demo
@@ -556,9 +636,8 @@ export default function LandingPage() {
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-gray-400">
                 <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">Credits</a></li>
                 <li><a href="#demo" className="hover:text-white transition-colors">Demo</a></li>
-                <li><Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link></li>
               </ul>
             </div>
 
@@ -576,7 +655,7 @@ export default function LandingPage() {
 
           <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © 2024 NexPrep. All rights reserved.
+              © 2025 NexPrep. All rights reserved.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a>

@@ -1,4 +1,4 @@
-import { Calendar, LayoutDashboard, List, Settings, WalletCards } from "lucide-react"
+import { Calendar, LayoutDashboard, List, LogOut, Settings, WalletCards } from "lucide-react"
 
 export const SidebarConstant =[
 
@@ -22,6 +22,11 @@ export const SidebarConstant =[
         name: "Settings",
         icon: Settings,
         path: "/settings",
+    },
+    {
+        name: "Signout",
+        icon: LogOut,
+        path: "/logout",
     }
 ]
 import {

@@ -1,82 +1,82 @@
-"use client"
+"use client";
 import { UserDetailContext } from '@/context/UserDetail.context';
-import { supabase } from '@/services/supabaseClient'
-import React, { useEffect } from 'react'
+import { supabase } from '@/services/supabaseClient';
+import { useRouter } from 'next/navigation'; // ✅ correct for app dir
+import React, { useEffect } from 'react';
 
 function Provider({ children }) {
-    const [user, setUser] = React.useState(null);
-    useEffect(() => {
-        console.log('Provider component mounted');
-        CreateNewUser();
-    }, []);
-    const CreateNewUser = () => {
-        console.log('Creating new user if not exists');
-        supabase.auth.getUser().then(async ({ data, error }) => {
-            if (error) {
-                console.error('Error fetching user:', error.message);
-                return;
+  const [user, setUser] = React.useState(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    console.log('Provider mounted');
+    handleAuthAndUser();
+  }, []);
+
+  const handleAuthAndUser = async () => {
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData?.user) {
+        console.log("User not authenticated");
+        return;
+      }
+
+      const userEmail = authData.user.email;
+      console.log("Authenticated user:", userEmail);
+
+      const { data: existingUser, error: fetchError } = await supabase
+        .from('Users')
+        .select('*')
+        .eq('email', userEmail)
+        .single(); // grabs one row, not an array
+
+      if (fetchError && fetchError.code !== "PGRST116") {
+        console.error("Error checking user:", fetchError.message);
+        return;
+      }
+
+      if (!existingUser) {
+        console.log("User not found, creating new user");
+        const { data: insertedUser, error: insertError } = await supabase
+          .from('Users')
+          .insert([
+            {
+              Name: authData.user.user_metadata?.name || userEmail.split('@')[0],
+              email: userEmail,
+              pfp: authData.user.user_metadata?.picture || null,
             }
-            
-            if (!data.user) {
-                console.log('No authenticated user found');
-                return;
-            }
-            
-            console.log('Authenticated user:', data.user);
-            
-            //check if user already exists            
-            let { data: Users, error: userError } = await supabase
-                .from('Users')
-                .select("*")
-                .eq('email', data.user.email);
-            
-            if (userError) {
-                console.error('Error fetching users:', userError.message);
-                return;
-            }
-            
-            console.log('Users found:', Users);
-            
-            // If User does not exist, create a new user
-            if (!Users || Users.length === 0) {
-                console.log('No user found, creating a new user');
-                
-                const { data: insertData, error: insertError } = await supabase
-                    .from('Users')
-                    .insert([
-                        { 
-                            Name: data.user.user_metadata?.name || data.user.email.split('@')[0], 
-                            email: data.user.email, 
-                            pfp: data.user.user_metadata?.picture || null, 
-                        }
-                    ])
-                    
-                
-                if (insertError) {
-                    console.error('Error creating new user:', insertError.message);
-                    return;
-                }
-                
-                console.log('New user created successfully:', insertData);
-                setUser(insertData[0]);
-            } else {
-                console.log('User already exists, setting user data:', Users[0]);
-                setUser(Users[0]);
-            }
-        }).catch(err => {
-            console.error('Unexpected error in CreateNewUser:', err);
-        });
+          ])
+          .select()
+          .single(); // fetch inserted row
+
+        if (insertError) {
+          console.error("Error creating user:", insertError.message);
+          return;
+        }
+
+        setUser(insertedUser);
+      } else {
+        setUser(existingUser);
+      }
+
+      // ✅ Only push once at the end
+      router.push('/dashboard');
+
+    } catch (err) {
+      console.error("Unexpected error:", err);
     }
-      return (
-        <UserDetailContext.Provider value={{ user, setUser }}>
-            {children}
-        </UserDetailContext.Provider>
-    )
-}   
+  };
 
-export default Provider
-export const useUser= () => {
-    const context = React.useContext(UserDetailContext);
-
-    return context;
+  return (
+    <UserDetailContext.Provider value={{ user, setUser }}>
+      {children}
+    </UserDetailContext.Provider>
+  );
 }
+
+export default Provider;
+
+export const useUser = () => {
+  const context = React.useContext(UserDetailContext);
+  return context;
+};
