@@ -112,7 +112,13 @@ function AllInterviews() {
     
     if (scores.length === 0) return null;
     
-    return (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(1);
+    const average = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    
+    // Convert from 10-point scale to 5-point scale if needed
+    const normalizedScore = average > 5 ? (average / 2) : average;
+    
+    // Ensure the score doesn't exceed 5
+    return Math.min(normalizedScore, 5).toFixed(1);
   };
 
   const getRecommendationColor = (recommendation) => {
