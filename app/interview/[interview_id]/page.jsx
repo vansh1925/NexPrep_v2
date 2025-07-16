@@ -65,13 +65,13 @@ function Interview() {
       username: name,
       interviewData: Interviewdata[0]
     });
-    console.log("Interview data set in context", interviewData);
+
     // Short delay to ensure context updates before navigation
     setTimeout(() => {
       // Then navigate to the next page
       router.push(`/interview/${interview_id}/start`);
     }, 300);
-    console.log("Interview data set in context", interviewData);
+
   } catch (error) {
     console.error("Error in handleStartInterview:", error);
     setLoading(false);
@@ -187,7 +187,7 @@ function Interview() {
                 <h2 className="text-sm font-semibold text-gray-800 mb-2">Before You Begin</h2>
                 <ul className="space-y-1.5 text-sm">
                   {[
-                    { icon: <Mic className="w-4 h-4 text-primary" />, text: "Test your Camera and Microphone" },
+                    { icon: <Mic className="w-4 h-4 text-primary" />, text: "Test your Microphone" },
                     { icon: <LucideMessageCircleQuestion className="w-4 h-4 text-primary" />, text: "Ensure you are in a quiet environment" },
                     { icon: <Wifi className="w-4 h-4 text-primary" />, text: "Make sure you have a stable internet connection" }
                   ].map((item, index) => (

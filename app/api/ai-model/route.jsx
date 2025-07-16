@@ -1,7 +1,9 @@
-import { OpenAI } from "openai";
+
 import { NextResponse } from "next/server";
+import { GoogleGenAI } from "@google/genai"
 
 export async function POST(req) {
+    const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })
     try {
         // Parse the form data from the request
         const formData = await req.json();
@@ -10,83 +12,57 @@ export async function POST(req) {
         const prompt = constructInterviewPrompt(formData);
         
         // Initialize the AI client
-        const openai = new OpenAI({
-            baseURL: "https://openrouter.ai/api/v1",
-            apiKey: process.env.OPENROUTERAPI_KEY,
+        const response = await ai.models.generateContent({
+            model: "gemini-2.0-flash-lite",
+            contents: prompt,
+            // maxOutputTokens: 1000,
+            // temperature: 0.7
         });
         
-        // Make request to the AI model
-        const completion = await openai.chat.completions.create({
-            model: "google/gemini-2.0-flash-exp:free",
-            messages: [
-                { role: "system", content: "You are an expert technical interviewer designed to create relevant interview questions based on job requirements." },
-                { role: "user", content: prompt }
-            ],
-            temperature: 0.7, // Balanced between creativity and relevance
-            max_tokens: 2000, // Enough tokens for multiple detailed questions
-        });
+        let questionsData;
         
-        const response = completion.choices[0].message;
-        console.log("AI Response Object:", response);
-        console.log("AI Response Content Type:", typeof response.content);
-        console.log("AI Response Raw Content:", response.content);
-        
-        // Try to parse the response content as JSON
-        let questionsData = response.content;
         try {
-            // Check if the content is already in JSON format or needs to be parsed
-            if (typeof response.content === 'string') {
-                // Clean up the response to remove Markdown code block markers
-                let cleanedContent = response.content;
-                
-                // Remove Markdown code block markers (```json and ```)
-                cleanedContent = cleanedContent.replace(/```json\s*/g, '');
-                cleanedContent = cleanedContent.replace(/```\s*$/g, '');
-                cleanedContent = cleanedContent.replace(/```/g, '');
-                
-                console.log("Cleaned content:", cleanedContent);
-                
-                // Try to extract JSON from the string if it's not already pure JSON
-                try {
-                    // First try with the cleaned content
-                    questionsData = JSON.parse(cleanedContent);
-                } catch (initialError) {
-                    console.log("Initial parse failed:", initialError);
-                    
-                    // If that fails, try to extract just the array part
-                    const jsonMatch = cleanedContent.match(/\[[\s\S]*\]/);
-                    if (jsonMatch) {
-                        questionsData = JSON.parse(jsonMatch[0]);
-                    } else {
-                        throw initialError;
-                    }
-                }
-            }
+            // Get the response text
+            let responseText = response.text;
             
-            // Validate the parsed questions to ensure they have the expected structure
-            if (Array.isArray(questionsData)) {
-                questionsData = questionsData.map(q => ({
-                    question: q.question || "Question text missing",
-                    tests: q.tests || "Evaluation criteria not provided",
-                    sampleAnswer: q.sampleAnswer || "Sample answer not provided",
-                    followUps: Array.isArray(q.followUps) ? q.followUps : []
-                }));
+            // Clean the raw text to ensure it is a valid JSON array from beginning to end
+            const cleanText = responseText.replace(/^```json\s*/, "") // remove starting ```json
+                                         .replace(/```$/, "") // remove ending ```
+                                         .trim(); // trim whitespace
+            
+            // Parse the cleaned text as JSON
+            questionsData = JSON.parse(cleanText);
+            
+        } catch (initialError) {
+            console.log("Initial parse failed:", initialError);
+            
+            // If that fails, try to extract just the array part
+            const jsonMatch = response.text.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                questionsData = JSON.parse(jsonMatch[0]);
+            } else {
+                throw initialError;
             }
-        } catch (error) {
-            console.error("Error parsing AI response:", error);
-            // If parsing fails, return the raw content
-            questionsData = response.content;
+        }
+        
+        // Validate the parsed questions to ensure they have the expected structure
+        if (Array.isArray(questionsData)) {
+            questionsData = questionsData.map(q => ({
+                question: q.question || "Question text missing",
+                tests: q.tests || "Evaluation criteria not provided",
+                sampleAnswer: q.sampleAnswer || "Sample answer not provided",
+                followUps: Array.isArray(q.followUps) ? q.followUps : []
+            }));
         }
         
         // Return the generated questions
         return NextResponse.json({ 
             success: true, 
             questions: questionsData,
-            rawResponse: response.content, // Include raw response for debugging
+            rawResponse: response.text, // Include raw response for debugging
             metadata: {
-                model: completion.model,
+                model: "gemini-2.0-flash-lite",
                 jobPosition: formData.jobPosition,
-                interviewType: formData.interviewType,
                 difficultyLevel: formData.difficultyLevel
             }
         });
@@ -109,12 +85,7 @@ function constructInterviewPrompt(formData) {
         jobDescription,
         experienceLevel,
         interviewDuration,
-        interviewType,
-        difficultyLevel,
-        requiredSkills,
-        topicsTocover,
-        interviewFormat,
-        additionalNotes
+        difficultyLevel
     } = formData;
     
     // Convert experience level to human-readable format
@@ -124,17 +95,10 @@ function constructInterviewPrompt(formData) {
         'senior': 'Senior Level (5-8 years)',
         'expert': 'Expert Level (8+ years)'
     }[experienceLevel] || experienceLevel;
-    
-    // Convert interview format to human-readable format
-    const interviewFormatText = {
-        'conversational': 'Conversational',
-        'structured': 'Structured Q&A',
-        'technical': 'Technical Assessment',
-        'mixed': 'Mixed Format'
-    }[interviewFormat] || interviewFormat;
 
     // Calculate approximate number of questions based on duration
-    const durationInMinutes = parseInt(interviewDuration) || 30;
+    const durationMatch = interviewDuration.match(/(\d+)/);
+    const durationInMinutes = durationMatch ? parseInt(durationMatch[1]) : 30;
     const suggestedQuestionCount = Math.max(5, Math.floor(durationInMinutes / 5));
     
     return `
@@ -148,21 +112,16 @@ CANDIDATE PROFILE AND ROLE DETAILS:
 - Job Position: ${jobPosition}
 - Role Description: ${jobDescription}
 - Candidate Experience Level: ${experienceLevelText}
-- Required Skills: ${requiredSkills}
 
 INTERVIEW DESIGN PARAMETERS:
 - Total Interview Duration: ${interviewDuration}
-- Interview Types: ${interviewType.join(', ')}
-- Interview Format: ${interviewFormatText}
 - Difficulty Level: ${difficultyLevel}
-${topicsTocover ? `- Specific Topics to Cover: ${topicsTocover}` : ''}
-${additionalNotes ? `- Additional Notes: ${additionalNotes}` : ''}
 
 OBJECTIVE:
-Generate a balanced set of interview questions that reflect real-world scenarios and expectations for the role. Your questions should help assess both core competencies and soft skills based on the selected interview type(s).
+Generate a balanced set of interview questions that reflect real-world scenarios and expectations for the role. Your questions should help assess both core competencies and soft skills relevant to the position.
 
 GUIDELINES:
-1. Use the interview types (${interviewType.join(', ')}) as the foundation to distribute question types:
+1. Create a mix of question types appropriate for the role:
    - Technical: code-related, architecture, tools, or best practices.
    - Behavioral: mindset, communication, decision-making.
    - Experience-based: past roles, responsibilities, challenges.
@@ -171,7 +130,7 @@ GUIDELINES:
 
 2. Tailor your questions to suit ${experienceLevelText} level candidates and match the overall ${difficultyLevel.toLowerCase()} difficulty.
 
-3. Focus on testing the listed skills and responsibilities from the role description. Include domain-relevant challenges.
+3. Focus on testing skills and responsibilities relevant to the role based on the job description provided.
 
 4. For each question, return an object with the following structure:
    {

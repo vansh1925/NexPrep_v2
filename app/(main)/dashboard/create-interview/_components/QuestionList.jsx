@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { CheckCircle, FileText, Play } from 'lucide-react';
 
-function QuestionList({ questions = [], formData = {}, isLoading = false, onClose }) {
+function QuestionList({ questions = [], formData = {}, isLoading = false, onClose, interviewId, onStartInterview }) {
     const [activeQuestion, setActiveQuestion] = useState(null);
     
     // Parse the questions JSON if it's a string
@@ -114,45 +114,97 @@ function QuestionList({ questions = [], formData = {}, isLoading = false, onClos
                 </div>
 
                 {/* Interview Summary */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                    <div className="flex items-center mb-2">
-                        <FileText className="w-5 h-5 text-blue-600 mr-2" />
-                        <h3 className="font-semibold text-blue-900">Interview Summary</h3>
+                <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center mb-3">
+                        <FileText className="w-5 h-5 text-green-600 mr-2" />
+                        <h3 className="font-semibold text-green-900">Interview Summary</h3>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div>
-                            <span className="text-blue-700 font-medium">Position:</span>
-                            <p className="text-blue-800">{formData.jobPosition || 'Not specified'}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                        <div className="bg-white/50 p-3 rounded">
+                            <span className="text-gray-600 font-medium block">Position:</span>
+                            <p className="text-gray-800 font-semibold">{formData.jobPosition || 'Not specified'}</p>
                         </div>
-                        <div>
-                            <span className="text-blue-700 font-medium">Experience:</span>
-                            <p className="text-blue-800">{formData.experienceLevel || 'Not specified'}</p>
+                        <div className="bg-white/50 p-3 rounded">
+                            <span className="text-gray-600 font-medium block">Experience:</span>
+                            <p className="text-gray-800 font-semibold">
+                                {{
+                                    'entry': 'Entry Level',
+                                    'mid': 'Mid Level', 
+                                    'senior': 'Senior Level',
+                                    'expert': 'Expert Level'
+                                }[formData.experienceLevel] || formData.experienceLevel || 'Not specified'}
+                            </p>
                         </div>
-                        <div>
-                            <span className="text-blue-700 font-medium">Questions:</span>
-                            <p className="text-blue-800">{parsedQuestions.length} questions</p>
+                        <div className="bg-white/50 p-3 rounded">
+                            <span className="text-gray-600 font-medium block">Duration:</span>
+                            <p className="text-gray-800 font-semibold">{formData.interviewDuration || 'Not specified'}</p>
                         </div>
+                        <div className="bg-white/50 p-3 rounded">
+                            <span className="text-gray-600 font-medium block">Difficulty:</span>
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                formData.difficultyLevel === 'Easy' ? 'bg-green-100 text-green-700' :
+                                formData.difficultyLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
+                                formData.difficultyLevel === 'Hard' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-700'
+                            }`}>
+                                {formData.difficultyLevel || 'Not specified'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    
+                    
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                        <span className="text-gray-600 font-medium">Total Questions Generated: </span>
+                        <span className="text-green-700 font-bold text-lg">{parsedQuestions.length}</span>
                     </div>
                 </div>
                 
                 {/* Questions List */}
                 <div className="flex-1 overflow-hidden">
-                    <h3 className="font-semibold text-gray-800 mb-4">Interview Questions ({parsedQuestions.length})</h3>
-                    <div className="h-full overflow-y-auto pr-2">
-                        <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-gray-800 text-lg">Your Interview Questions</h3>
+                        <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
+                            {parsedQuestions.length} Questions
+                        </span>
+                    </div>
+                    <div className="h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+                        <div className="space-y-3">
                             {parsedQuestions.map((question, index) => (
                                 <div 
                                     key={index}
-                                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                                    className="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200 hover:border-blue-300"
                                 >
                                     <div className="flex items-start">
-                                        <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-sm font-semibold mr-3 mt-1">
+                                        <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-r from-primary to-primary/80 text-white rounded-full flex items-center justify-center text-sm font-bold mr-4 mt-1 shadow-md">
                                             {index + 1}
                                         </div>
                                         <div className="flex-1">
-                                            <p className="text-gray-800 font-medium leading-relaxed">
+                                            <p className="text-gray-800 font-medium leading-relaxed text-base">
                                                 {question.question}
                                             </p>
+                                            
+                                            {/* Show additional question details if available */}
+                                            {(question.tests || question.sampleAnswer) && (
+                                                <div className="mt-3 space-y-2">
+                                                    {question.tests && (
+                                                        <div className="text-sm">
+                                                            <span className="font-medium text-gray-600">Evaluates: </span>
+                                                            <span className="text-gray-700">{question.tests}</span>
+                                                        </div>
+                                                    )}
+                                                    {question.sampleAnswer && (
+                                                        <details className="text-sm">
+                                                            <summary className="font-medium text-gray-600 cursor-pointer hover:text-primary">
+                                                                Sample Answer Guide
+                                                            </summary>
+                                                            <p className="text-gray-700 mt-1 pl-4 border-l-2 border-gray-300">
+                                                                {question.sampleAnswer}
+                                                            </p>
+                                                        </details>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -162,24 +214,33 @@ function QuestionList({ questions = [], formData = {}, isLoading = false, onClos
                 </div>
                 
                 {/* Footer */}
-                <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
-                    <div className="text-sm text-gray-500">
-                        Ready to start your interview? Click continue to begin.
-                    </div>
-                    <div className="flex gap-3">
-                        <button 
-                            onClick={onClose}
-                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-                        >
-                            Close
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors flex items-center"
-                        >
-                            <Play className="w-4 h-4 mr-2" />
-                            Start Interview
-                        </button>
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="text-sm text-gray-600 text-center sm:text-left">
+                            🎉 <strong>Interview questions generated successfully!</strong> You can now start practicing or save this for later.
+                        </div>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={onClose}
+                                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                            >
+                                Back to Dashboard
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (interviewId && onStartInterview) {
+                                        onStartInterview(interviewId);
+                                    } else {
+                                        console.error("Interview ID not found or onStartInterview not provided");
+                                        onClose();
+                                    }
+                                }}
+                                className="px-8 py-2 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg hover:from-green-700 hover:to-green-600 transition-all flex items-center font-semibold shadow-lg hover:shadow-xl"
+                            >
+                                <Play className="w-4 h-4 mr-2" />
+                                Start Interview
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -44,6 +44,7 @@ function Provider({ children }) {
               Name: authData.user.user_metadata?.name || userEmail.split('@')[0],
               email: userEmail,
               pfp: authData.user.user_metadata?.picture || null,
+              credits: 1, // Give 1 free credit to new users
             }
           ])
           .select()

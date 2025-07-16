@@ -220,9 +220,10 @@ We welcome contributions to NexPrep! Please follow these steps:
 POST /api/ai-model
 {
   "jobPosition": "Software Engineer",
+  "jobDescription":""
   "experienceLevel": "mid",
-  "interviewType": ["technical", "behavioral"],
-  "difficultyLevel": "medium"
+  "difficultyLevel": "medium",
+  "interviewDuration":"30 minutes"
 }
 ```
 

@@ -1,48 +1,49 @@
-import OpenAI from "openai";
+
 import { NextResponse } from "next/server";
+import { GoogleGenAI } from "@google/genai"
 
 function constructInterviewPrompt() {
     return `You are an AI Interview Evaluator.
 
-Based on the following interview conversation between the AI assistant and the user (provided as {{conversation}}), analyze the user's performance.
+Analyze the following interview conversation between the candidate and the interviewer (provided as {{conversation}}). Evaluate the candidate's performance across technical and soft skills.
 
-Give me a structured feedback in **JSON format** that includes:
-
-1. **rating** (out of 10) for:
-- technicalSkills
-- communication
-- problemSolving
-- experience
-
-2. **summary**: A concise **3-line overview** of the candidate’s performance. Mention strengths, weaknesses, and tone (confidence, clarity, etc.).
-
-3. **recommendation**: A one-word output — either "Hire" or "Reject".
-
-4. **recommendationMsg**: A **short one-liner** to justify the recommendation decision clearly and professionally.
-
-Only return a valid JSON object with these 4 keys. Be objective, insightful, and avoid any fluff.
-
-Example:
+Return your evaluation in this exact JSON format:
 {
   "feedback": {
     "rating": {
-      "technicalSkills": 7,
-      "communication": 8,
-      "problemSolving": 6,
-      "experience": 7
+      "technicalSkills": X,
+      "communication": Y,
+      "problemSolving": Z,
+      "experience": W
     },
-    "summary": "The candidate demonstrated good experience and clear communication. Some technical areas showed hesitation. Problem-solving skills were average with room for deeper logic handling.",
-    "recommendation": "Hire",
-    "recommendationMsg": "Strong communication and experience make the candidate a good fit."
+    "summary": "Realistic 3-line overview of the candidate’s performance. Mention specific strengths, weaknesses, technical depth, and the tone (e.g. confident, unsure, generic, articulate).",
+    "recommendation": "Hire" or "Reject",
+    "recommendationMsg": "A sharp, one-line explanation for your decision, based on actual performance."
   }
-}`;
+}
+Scoring Guidance:
+0–3: Weak or no understanding
+
+4–5: Basic, needs improvement
+
+6–7: Average to good, but incomplete
+
+8–9: Strong, confident grasp
+
+10: Exceptional and in-depth
+
+Critical Instructions:
+If the candidate gives poor or vague answers, reflect it with low scores and a constructive summary.
+
+Avoid default high ratings or fluff. Be brutally honest but fair.
+
+Summarize in clear, interviewer-style language, as if giving post-interview notes to a hiring manager.
+
+Only output a valid JSON object with the structure above. Do not include explanations or any extra text outside the JSON.`;
 }
 export async function POST(req) {
   try {
-    const openai = new OpenAI({
-      baseURL: "https://openrouter.ai/api/v1",
-      apiKey: process.env.OPENROUTERAPI_KEY,
-    });
+    const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
 
     const body = await req.json(); // Parse the request body
     if (!body?.conversation) {
@@ -56,21 +57,14 @@ export async function POST(req) {
       : body.conversation;  
     const finalprompt = prompt.replace("{{conversation}}", conversationString);
     console.log("Final Prompt:", finalprompt);
-    const completion = await openai.chat.completions.create({
-      model: "google/gemini-2.0-flash-exp:free",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are an expert technical interviewer designed to review candidates based on the job requirements and their responses.",
-        },
-        { role: "user", content: finalprompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    });
+    const completion =  await ai.models.generateContent({
+            model: "gemini-2.0-flash-lite",
+            contents: prompt,
+            // maxOutputTokens: 1000,
+            // temperature: 0.7
+        });
 
-    let cleanedContent = completion.choices[0].message.content;
+    let cleanedContent = completion.text;
     cleanedContent = cleanedContent
       .replace(/```json\s*/g, "")
       .replace(/```\s*$/g, "")

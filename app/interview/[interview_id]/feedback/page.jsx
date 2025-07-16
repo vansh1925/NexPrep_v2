@@ -15,26 +15,36 @@ function Feedback() {
   const getFeedback = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
       let { data, error } = await supabase
         .from('postinterview')
         .select("interview_id, interview_review")
         .eq('interview_id', interview_id)
-        .single();
+        .order('created_at', { ascending: false }) // Get the most recent feedback
+        .limit(1);
 
       if (error) {
         console.error('Supabase error:', error);
-        setError('Failed to fetch feedback data');
+        if (error.code === 'PGRST116') {
+          setError('Multiple feedback entries found. Please contact support.');
+        } else {
+          setError(`Database error: ${error.message || 'Unknown error'}`);
+        }
         return;
       }
 
-      if (data && data.interview_review) {
+      // Handle the array response from limit(1)
+      const feedbackEntry = data && data.length > 0 ? data[0] : null;
+      
+      if (feedbackEntry && feedbackEntry.interview_review) {
         // Parse the interview_review JSON if it's a string
-        const reviewData = typeof data.interview_review === 'string' 
-          ? JSON.parse(data.interview_review) 
-          : data.interview_review;
+        const reviewData = typeof feedbackEntry.interview_review === 'string' 
+          ? JSON.parse(feedbackEntry.interview_review) 
+          : feedbackEntry.interview_review;
         
         setFeedbackData({
-          ...data,
+          ...feedbackEntry,
           interview_review: reviewData
         });
       } else {
@@ -95,14 +105,25 @@ function Feedback() {
           <div className="text-red-500 mx-auto mb-4 w-16 h-16 flex items-center justify-center rounded-full bg-red-500/20">
             <XCircle className="w-10 h-10" />
           </div>
-          <h2 className="text-2xl font-bold mb-2 text-white">Error Loading Feedback</h2>
+          <h2 className="text-2xl font-bold mb-2 text-white">Feedback Not Available</h2>
           <p className="text-gray-300 mb-6">{error}</p>
-          <button 
-            onClick={() => router.back()}
-            className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg"
-          >
-            Go Back
-          </button>
+          <div className="space-y-3">
+            <button 
+              onClick={() => {
+                setError(null);
+                getFeedback();
+              }}
+              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg"
+            >
+              Try Again
+            </button>
+            <button 
+              onClick={() => router.push('/dashboard')}
+              className="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );

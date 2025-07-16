@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';     
-import { Clock, Mic, MicOff, Camera, CameraOff, PhoneOff, Volume2, VolumeX, MessageSquare, Axis3DIcon } from 'lucide-react';
+import { Clock, Mic, MicOff, PhoneOff, Volume2, VolumeX, MessageSquare } from 'lucide-react';
 import Image from 'next/image';
 import { InterviewDetailsContext } from '@/context/InterviewDetails.context';
 import { useUser } from '@/app/provider';
@@ -21,7 +21,6 @@ function Interview() {
   const [loadError, setLoadError] = useState(false);
    
   const [isMuted, setIsMuted] = useState(false);
-  const [isCameraOff, setIsCameraOff] = useState(false);
   const [isSpeakerOff, setIsSpeakerOff] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
@@ -40,16 +39,12 @@ function Interview() {
           
           // Set up basic event listeners
           vapiInstance.on('call-start', () =>{
-            console.log("Call has started");
             setIsCallActive(true);
             setIsTimerActive(true);
           }); 
           vapiInstance.on('call-end', () => {
-            console.log("Call has ended");
             setIsCallActive(false);
             setIsTimerActive(false);
-            
-
           });
           vapiInstance.on('error', (error) => console.error("VAPI error:", error));
 
@@ -115,7 +110,6 @@ function Interview() {
   // Simple function to start the VAPI call
   const startCall = () => {
     if (!interviewData || !vapiInstance) {
-      console.error("Cannot start call: missing interview data or VAPI not initialized");
       return;
     }
     
@@ -167,7 +161,6 @@ Key Guidelines:
       // Start the call
       vapiInstance.start(assistantOptions);
       vapiInstance.on('message', (message) => {
-        console.log("Received message:", message?.conversation);
         if (message?.conversation) {
           setConversation(prev => [...prev, ...message.conversation]);
         }
@@ -197,30 +190,137 @@ Key Guidelines:
   };
   const GenerateFeedback = async () => {
     if (!interviewData || !vapiInstance) {
-      console.error("Cannot generate feedback: missing interview data or VAPI not initialized");
       return;
     }
+    
     try {
+      // Check if feedback already exists for this interview
+      const { data: existingFeedback, error: checkError } = await supabase
+        .from('postinterview')
+        .select('interview_id')
+        .eq('interview_id', interviewData?.interviewData?.interview_id)
+        .limit(1);
+        
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error("Error checking existing feedback:", checkError);
+      }
+      
+      if (existingFeedback && existingFeedback.length > 0) {
+        return;
+      }
+      
+      // Check if we have conversation data
+      if (!Conversation || Conversation.length === 0) {
+        // Create a default feedback entry to avoid errors
+        const defaultFeedback = {
+          feedback: {
+            summary: "Interview completed but no conversation data was recorded.",
+            recommendation: "Incomplete",
+            recommendationMsg: "Unable to provide feedback due to missing conversation data.",
+            rating: {
+              technicalSkills: 0,
+              communication: 0,
+              problemSolving: 0,
+              overall: 0
+            }
+          }
+        };
+        
+        const { error: insertError } = await supabase
+          .from('postinterview')
+          .insert([
+            { 
+              interview_id: interviewData?.interviewData?.interview_id, 
+              interview_review: defaultFeedback 
+            },
+          ]);
+          
+        if (insertError) {
+          console.error("Error inserting default feedback:", insertError);
+        }
+        return;
+      }
+
       const result = await fetch('/api/ai-feedback', {
         method: 'POST',
         headers: {
-        'Content-Type': 'application/json', 
-      },
+          'Content-Type': 'application/json', 
+        },
         body: JSON.stringify({
           conversation: Conversation
-          
         }),
       });
-      const data = await result.json(); // Parse response
-      console.log("Feedback received:", data);
-      const { feedback, error } = await supabase
-      .from('postinterview')
-      .insert([
-        { interview_id: interviewData?.interviewData?.interview_id  , interview_review: data },
-      ])
+      
+      if (!result.ok) {
+        throw new Error(`API request failed with status ${result.status}`);
+      }
+      
+      const data = await result.json();
+      
+      if (!data || typeof data !== 'object') {
+        throw new Error("Invalid feedback data received from API");
+      }
+      
+      const { error: insertError } = await supabase
+        .from('postinterview')
+        .insert([
+          { 
+            interview_id: interviewData?.interviewData?.interview_id, 
+            interview_review: data 
+          },
+        ]);
+        
+      if (insertError) {
+        console.error("Error inserting feedback:", insertError);
+        throw new Error(`Database insert failed: ${insertError.message}`);
+      }
         
     } catch (error) {
       console.error("Error generating feedback:", error);
+      
+      // Create a fallback feedback entry so the feedback page doesn't crash
+      try {
+        // Check again if feedback was created by another process
+        const { data: doubleCheck } = await supabase
+          .from('postinterview')
+          .select('interview_id')
+          .eq('interview_id', interviewData?.interviewData?.interview_id)
+          .limit(1);
+          
+        if (doubleCheck && doubleCheck.length > 0) {
+          return;
+        }
+        
+        const fallbackFeedback = {
+          feedback: {
+            summary: "Interview completed but feedback generation encountered an error.",
+            recommendation: "Review Required",
+            recommendationMsg: "Manual review needed due to technical issues with feedback generation.",
+            rating: {
+              technicalSkills: 5,
+              communication: 5,
+              problemSolving: 5,
+              overall: 5
+            }
+          },
+          error: error.message
+        };
+        
+        const { error: fallbackError } = await supabase
+          .from('postinterview')
+          .insert([
+            { 
+              interview_id: interviewData?.interviewData?.interview_id, 
+              interview_review: fallbackFeedback 
+            },
+          ]);
+          
+        if (fallbackError) {
+          console.error("Error inserting fallback feedback:", fallbackError);
+        }
+      } catch (fallbackError) {
+        console.error("Failed to insert fallback feedback:", fallbackError);
+      }
     }
   };
 
@@ -355,59 +455,31 @@ Key Guidelines:
             
             {/* User video */}
             <div className="relative bg-gray-700 rounded-xl overflow-hidden flex-1 flex items-center justify-center">
-              {isCameraOff ? (
-                <div className="flex flex-col items-center justify-center text-gray-400">
-                  <div className="h-32 w-32 rounded-full overflow-hidden bg-gray-600">
-                    {user?.pfp ? (
-                      <Image 
-                        src={user?.pfp} 
-                        alt="User Profile" 
-                        width={140} 
-                        height={140} 
-                        className="object-cover h-full w-full"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = "/default-avatar.png"; 
-                        }}
-                      />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center bg-gray-600">
-                        <span className="text-4xl font-medium text-gray-300">
-                          {userName ? userName.charAt(0).toUpperCase() : "G"}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="mt-2">Camera is off</p>
-                </div>
-              ) : (
-                <div className="relative h-full w-full">
-                  <div className="absolute inset-0 bg-gradient-to-b from-gray-600 to-gray-800"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="h-32 w-32 rounded-full overflow-hidden bg-gray-600 flex items-center justify-center mb-4">
-                      {user?.pfp ? (
-                        <Image 
-                          src={user?.pfp} 
-                          alt="User Profile" 
-                          width={140} 
-                          height={140} 
-                          className="object-cover h-full w-full"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "/default-avatar.png";
-                          }}
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center bg-gray-600">
-                          <span className="text-4xl font-medium text-gray-300">
-                            {userName ? userName.charAt(0).toUpperCase() : "G"}
-                          </span>
-                        </div>
-                      )}
+              <div className="flex flex-col items-center justify-center text-gray-400">
+                <div className="h-32 w-32 rounded-full overflow-hidden bg-gray-600">
+                  {user?.user?.pfp ? (
+                    <Image 
+                      src={user.user.pfp} 
+                      alt="User Profile" 
+                      width={140} 
+                      height={140} 
+                      className="object-cover h-full w-full"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "/default-avatar.png"; 
+                      }}
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center bg-gray-600">
+                      <span className="text-4xl font-medium text-gray-300">
+                        {userName ? userName.charAt(0).toUpperCase() : "G"}
+                      </span>
                     </div>
-                  </div>
+                  )}
                 </div>
-              )}
+                <p className="mt-2 text-lg font-medium text-white">{userName || "Guest"}</p>
+                
+              </div>
               <div className="absolute bottom-4 left-4 bg-black bg-opacity-60 px-3 py-1 rounded-md text-sm">
                 {userName || "Guest"} (You)
               </div>
@@ -436,13 +508,6 @@ Key Guidelines:
               className="p-4 rounded-full bg-red-600 hover:bg-red-700"
             >
               <PhoneOff className="w-6 h-6" />
-            </button>
-            
-            <button 
-              onClick={() => setIsCameraOff(!isCameraOff)}
-              className={`p-4 rounded-full ${isCameraOff ? 'bg-red-500' : 'bg-gray-600 hover:bg-gray-500'}`}
-            >
-              {isCameraOff ? <CameraOff className="w-6 h-6" /> : <Camera className="w-6 h-6" />}
             </button>
             
             <button 

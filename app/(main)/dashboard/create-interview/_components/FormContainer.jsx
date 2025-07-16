@@ -9,9 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { InterviewType } from '@/services/Constant'
 
-function FormContainer({ step = 1, formData, updateFormData, errors = {} }) {
+// Updated to single form layout
+function FormContainer({ formData, updateFormData, errors = {} }) {
   // This ensures our component can render even if props aren't provided
   const data = formData || {};
   const updateData = updateFormData || (() => {});
@@ -24,225 +24,155 @@ function FormContainer({ step = 1, formData, updateFormData, errors = {} }) {
 
   return (
     <div className='p-6 bg-white rounded-lg shadow-sm border border-gray-100'>
-        {/* Step 1: Job Details */}
-        <div className={`${step === 1 ? 'block' : 'hidden'}`}>
-          <div className="mb-6">
-              <h2 className='text-xl font-bold mb-2'>Job Position</h2>
-              <Input 
-                placeholder="ex- Frontend Developer" 
-                value={data.jobPosition || ''} 
-                onChange={(e) => updateData('jobPosition', e.target.value)}
-                className={errors.jobPosition ? 'border-red-500' : ''}
-              />
-              <ErrorMessage field="jobPosition" />
-          </div>
-          <div className="mb-6">
-              <h2 className='text-xl font-bold mb-2'>Job Description</h2>
-              <Textarea 
-                placeholder="Describe the job role and responsibilities" 
-                className={`min-h-[150px] ${errors.jobDescription ? 'border-red-500' : ''}`}
-                value={data.jobDescription || ''} 
-                onChange={(e) => updateData('jobDescription', e.target.value)}
-              />
-              <ErrorMessage field="jobDescription" />
-          </div>
-          <div className="mb-6">
-              <h2 className='text-xl font-bold mb-2'>Experience Level</h2>
-              <Select 
-                value={data.experienceLevel || ''} 
-                onValueChange={(value) => updateData('experienceLevel', value)}
-              >
-                <SelectTrigger className={`w-full ${errors.experienceLevel ? 'border-red-500' : ''}`}>
-                  <SelectValue placeholder="Select Experience Level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="entry">Entry Level (0-2 years)</SelectItem>
-                  <SelectItem value="mid">Mid Level (2-5 years)</SelectItem>
-                  <SelectItem value="senior">Senior Level (5-8 years)</SelectItem>
-                  <SelectItem value="expert">Expert Level (8+ years)</SelectItem>
-                </SelectContent>
-              </Select>
-              <ErrorMessage field="experienceLevel" />
-          </div>
+      <div className='text-center mb-8'>
+        <h2 className='text-2xl font-bold mb-2 text-gray-800'>Create Your Interview</h2>
+        <p className='text-gray-600'>Fill in the essential details below to generate customized interview questions</p>
+      </div>
+      
+      {/* Single Form with Essential Fields */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Job Position */}
+        <div className="md:col-span-2">
+          <h3 className='text-lg font-semibold mb-2'>Job Position *</h3>
+          <Input 
+            placeholder="e.g., Frontend Developer, Data Scientist, Product Manager" 
+            value={data.jobPosition || ''} 
+            onChange={(e) => updateData('jobPosition', e.target.value)}
+            className={errors.jobPosition ? 'border-red-500' : ''}
+          />
+          <ErrorMessage field="jobPosition" />
         </div>
 
-        {/* Step 2: Interview Configuration */}
-        <div className={`${step === 2 ? 'block' : 'hidden'}`}>
-          <div className="mb-6">
-              <h2 className='text-xl font-bold mb-2'>Interview Duration</h2>
-              <Select
-                value={data.interviewDuration || ''}
-                onValueChange={(value) => updateData('interviewDuration', value)}
-              >
-                  <SelectTrigger className={`w-full ${errors.interviewDuration ? 'border-red-500' : ''}`}>
-                      <SelectValue placeholder="Select Duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                      <SelectItem value="5 Min">5 minutes</SelectItem>
-                      <SelectItem value="15 Min">15 minutes</SelectItem>
-                      <SelectItem value="30 Min">30 minutes</SelectItem>
-                      <SelectItem value="60 Min">1 hour</SelectItem>
-                      <SelectItem value="90 Min">1.5 hours</SelectItem>
-                  </SelectContent>
-              </Select>
-              <ErrorMessage field="interviewDuration" />
-          </div>
-          <div className="mb-6">
-              <h2 className='text-xl font-bold mb-2'>Interview Type</h2>
-              <div className="flex items-center gap-2">
-                <p className="text-sm text-gray-500">Select one or more interview types (click to toggle)</p>
-                {Array.isArray(data.interviewType) && data.interviewType.length > 0 && (
-                  <span className="bg-primary text-white text-xs px-2 py-0.5 rounded-full">
-                    {data.interviewType.length} selected
-                  </span>
-                )}
-              </div>
-              <div className={`flex gap-4 flex-wrap mt-2 ${errors.interviewType ? 'border border-red-500 p-2 rounded-md' : ''}`}>
-                  {InterviewType.map((type,index) => (
-                      <div 
-                        key={index} 
-                        className={`flex items-center gap-2 border px-4 py-2 rounded-md cursor-pointer transition-all duration-200
-                          ${Array.isArray(data.interviewType) && data.interviewType.includes(type.title)
-                            ? 'bg-primary/10 border-primary' 
-                            : 'bg-white border-gray-200 hover:bg-secondary/80'}`}
-                        onClick={() => updateData('interviewType', type.title)}
-                      >
-                          <type.icon className={`h-6 w-6 ${Array.isArray(data.interviewType) && data.interviewType.includes(type.title) ? 'text-primary' : ''}`} />
-                          <span>{type.title}</span>
-                          {Array.isArray(data.interviewType) && data.interviewType.includes(type.title) && (
-                            <span className="ml-2 text-primary">✓</span>
-                          )}
-                      </div>
-                  ))}
-              </div>
-              <ErrorMessage field="interviewType" />
-          </div>
-          <div className="mb-6">
-              <h2 className='text-xl font-bold mb-2'>Difficulty Level</h2>
-              <div className={`flex gap-4 ${errors.difficultyLevel ? 'border border-red-500 p-2 rounded-md' : ''}`}>
-                {["Easy", "Medium", "Hard"].map((level) => (
-                  <div 
-                    key={level} 
-                    className={`flex-1 border rounded-md p-3 text-center cursor-pointer transition-all
-                      ${data.difficultyLevel === level
-                        ? 'bg-primary/10 border-primary' 
-                        : 'border-gray-200 hover:bg-secondary/80'}`}
-                    onClick={() => updateData('difficultyLevel', level)}
-                  >
-                    {level}
-                  </div>
-                ))}
-              </div>
-              <ErrorMessage field="difficultyLevel" />
-          </div>
+        {/* Experience Level */}
+        <div>
+          <h3 className='text-lg font-semibold mb-2'>Experience Level *</h3>
+          <Select 
+            value={data.experienceLevel || ''} 
+            onValueChange={(value) => updateData('experienceLevel', value)}
+          >
+            <SelectTrigger className={`w-full ${errors.experienceLevel ? 'border-red-500' : ''}`}>
+              <SelectValue placeholder="Select Experience Level" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="entry">Entry Level (0-2 years)</SelectItem>
+              <SelectItem value="mid">Mid Level (2-5 years)</SelectItem>
+              <SelectItem value="senior">Senior Level (5-8 years)</SelectItem>
+              <SelectItem value="expert">Expert Level (8+ years)</SelectItem>
+            </SelectContent>
+          </Select>
+          <ErrorMessage field="experienceLevel" />
         </div>
 
-        {/* Step 3: Additional Requirements */}
-        <div className={`${step === 3 ? 'block' : 'hidden'}`}>
-          <div className="mb-6">
-              <h2 className='text-xl font-bold mb-2'>Required Skills</h2>
-              <Textarea 
-                placeholder="Enter key skills separated by commas (e.g., React, JavaScript, CSS)" 
-                className={`min-h-[100px] ${errors.requiredSkills ? 'border-red-500' : ''}`}
-                value={data.requiredSkills || ''}
-                onChange={(e) => updateData('requiredSkills', e.target.value)}
-              />
-              <ErrorMessage field="requiredSkills" />
-          </div>
-          <div className="mb-6">
-              <h2 className='text-xl font-bold mb-2'>Specific Topics to Cover</h2>
-              <Textarea 
-                placeholder="Enter any specific topics you want the interview to focus on" 
-                className={`min-h-[100px] ${errors.topicsTocover ? 'border-red-500' : ''}`}
-                value={data.topicsTocover || ''}
-                onChange={(e) => updateData('topicsTocover', e.target.value)}
-              />
-              <ErrorMessage field="topicsTocover" />
-          </div>
-          <div className="mb-6">
-              <h2 className='text-xl font-bold mb-2'>Interview Format</h2>
-              <div className={`flex flex-wrap gap-4 ${errors.interviewFormat ? 'border border-red-500 p-2 rounded-md' : ''}`}>
-                {[
-                  { id: "conversational", name: "Conversational" },
-                  { id: "structured", name: "Structured Q&A" },
-                  { id: "technical", name: "Technical Assessment" },
-                  { id: "mixed", name: "Mixed Format" }
-                ].map((format) => (
-                  <div 
-                    key={format.id} 
-                    className={`flex-1 min-w-[180px] border rounded-md p-3 text-center cursor-pointer transition-all
-                      ${data.interviewFormat === format.id 
-                        ? 'bg-primary/10 border-primary' 
-                        : 'border-gray-200 hover:bg-secondary/80'}`}
-                    onClick={() => updateData('interviewFormat', format.id)}
-                  >
-                    {format.name}
-                  </div>
-                ))}
-              </div>
-              <ErrorMessage field="interviewFormat" />
-          </div>
-          <div className="mb-6">
-              <h2 className='text-xl font-bold mb-2'>Additional Notes</h2>
-              <Textarea 
-                placeholder="Any additional information that might help tailor the interview" 
-                className={`min-h-[100px] ${errors.additionalNotes ? 'border-red-500' : ''}`}
-                value={data.additionalNotes || ''}
-                onChange={(e) => updateData('additionalNotes', e.target.value)}
-              />
-              <ErrorMessage field="additionalNotes" />
-          </div>
-          
-          {/* Summary section */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <h2 className="text-xl font-bold mb-4">Interview Summary</h2>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-medium text-gray-700">Job Position:</h3>
-                  <p>{data.jobPosition || 'Not specified'}</p>
+        {/* Interview Duration */}
+        <div>
+          <h3 className='text-lg font-semibold mb-2'>Interview Duration *</h3>
+          <Select
+            value={data.interviewDuration || ''}
+            onValueChange={(value) => updateData('interviewDuration', value)}
+          >
+            <SelectTrigger className={`w-full ${errors.interviewDuration ? 'border-red-500' : ''}`}>
+              <SelectValue placeholder="Select Duration" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5 Min">5 minutes</SelectItem>
+              <SelectItem value="15 Min">15 minutes</SelectItem>
+              <SelectItem value="30 Min">30 minutes</SelectItem>
+              <SelectItem value="45 Min">45 minutes</SelectItem>
+              <SelectItem value="60 Min">1 hour</SelectItem>
+            </SelectContent>
+          </Select>
+          <ErrorMessage field="interviewDuration" />
+        </div>
+
+        {/* Job Description */}
+        <div className="md:col-span-2">
+          <h3 className='text-lg font-semibold mb-2'>Job Description *</h3>
+          <Textarea 
+            placeholder="Briefly describe the role, key responsibilities, and main requirements..." 
+            className={`min-h-[120px] ${errors.jobDescription ? 'border-red-500' : ''}`}
+            value={data.jobDescription || ''} 
+            onChange={(e) => updateData('jobDescription', e.target.value)}
+          />
+          <ErrorMessage field="jobDescription" />
+        </div>
+        {/* Difficulty Level */}
+        <div className="md:col-span-2">
+          <h3 className='text-lg font-semibold mb-2'>Difficulty Level *</h3>
+          <div className={`grid grid-cols-3 gap-4 ${errors.difficultyLevel ? 'border border-red-500 p-3 rounded-md' : ''}`}>
+            {["Easy", "Medium", "Hard"].map((level) => (
+              <div 
+                key={level} 
+                className={`border rounded-lg p-4 text-center cursor-pointer transition-all hover:scale-105
+                  ${data.difficultyLevel === level
+                    ? 'bg-primary/10 border-primary shadow-md' 
+                    : 'border-gray-200 hover:bg-gray-50'}`}
+                onClick={() => updateData('difficultyLevel', level)}
+              >
+                <div className={`font-semibold ${data.difficultyLevel === level ? 'text-primary' : 'text-gray-700'}`}>
+                  {level}
                 </div>
-                <div>
-                  <h3 className="font-medium text-gray-700">Experience Level:</h3>
-                  <p>{data.experienceLevel ? {
-                    'entry': 'Entry Level (0-2 years)',
-                    'mid': 'Mid Level (2-5 years)',
-                    'senior': 'Senior Level (5-8 years)',
-                    'expert': 'Expert Level (8+ years)'
-                  }[data.experienceLevel] : 'Not specified'}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-700">Interview Duration:</h3>
-                  <p>{data.interviewDuration || 'Not specified'}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-700">Difficulty Level:</h3>
-                  <p>{data.difficultyLevel || 'Not specified'}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-700">Interview Type:</h3>
-                  <p>{Array.isArray(data.interviewType) && data.interviewType.length > 0 
-                    ? data.interviewType.join(', ') 
-                    : 'Not specified'}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-700">Interview Format:</h3>
-                  <p>{data.interviewFormat ? {
-                    'conversational': 'Conversational',
-                    'structured': 'Structured Q&A',
-                    'technical': 'Technical Assessment',
-                    'mixed': 'Mixed Format'
-                  }[data.interviewFormat] : 'Not specified'}</p>
+                <div className="text-xs text-gray-500 mt-1">
+                  {level === 'Easy' && 'Basic concepts'}
+                  {level === 'Medium' && 'Intermediate skills'}
+                  {level === 'Hard' && 'Advanced topics'}
                 </div>
               </div>
-              <div className="mt-4">
-                <h3 className="font-medium text-gray-700">Required Skills:</h3>
-                <p className="whitespace-pre-wrap">{data.requiredSkills || 'Not specified'}</p>
+            ))}
+          </div>
+          <ErrorMessage field="difficultyLevel" />
+        </div>
+      </div>
+
+      {/* Summary Section */}
+      {(data.jobPosition || data.experienceLevel || data.interviewDuration) && (
+        <div className="mt-8 pt-6 border-t border-gray-200 bg-gray-50 p-4 rounded-lg">
+          <h3 className="text-lg font-semibold mb-3 text-gray-800">Interview Preview</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            {data.jobPosition && (
+              <div>
+                <span className="font-medium text-gray-600">Position:</span>
+                <p className="text-gray-800">{data.jobPosition}</p>
               </div>
-            </div>
+            )}
+            {data.experienceLevel && (
+              <div>
+                <span className="font-medium text-gray-600">Level:</span>
+                <p className="text-gray-800">
+                  {{
+                    'entry': 'Entry Level',
+                    'mid': 'Mid Level',
+                    'senior': 'Senior Level',
+                    'expert': 'Expert Level'
+                  }[data.experienceLevel]}
+                </p>
+              </div>
+            )}
+            {data.interviewDuration && (
+              <div>
+                <span className="font-medium text-gray-600">Duration:</span>
+                <p className="text-gray-800">{data.interviewDuration}</p>
+              </div>
+            )}
+            {data.difficultyLevel && (
+              <div>
+                <span className="font-medium text-gray-600">Difficulty:</span>
+                <p className="text-gray-800">{data.difficultyLevel}</p>
+              </div>
+            )}
           </div>
         </div>
+      )}
+
+      {/* Completion Status */}
+      {data.jobPosition && data.experienceLevel && data.interviewDuration && data.jobDescription && 
+       data.difficultyLevel && (
+        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2 text-green-700">
+            <span className="text-lg">✅</span>
+            <span className="font-medium">All required fields completed! Ready to create your interview.</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

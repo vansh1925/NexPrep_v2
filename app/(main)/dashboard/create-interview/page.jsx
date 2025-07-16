@@ -1,5 +1,4 @@
 "use client";
-import { Progress } from '@/components/ui/progress';
 import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation';
 import React from 'react'
@@ -11,28 +10,24 @@ import { supabase } from '@/services/supabaseClient';
 import { useUser } from '@/app/provider';
 import { toast } from 'sonner'; 
 
+// Helper function to extract numeric value from duration string
+const extractDurationMinutes = (durationString) => {
+  if (!durationString) return 30; // default
+  const match = durationString.match(/\d+/);
+  return match ? parseInt(match[0]) : 30;
+};
+
 function CreateInterview() {
   const user = useUser()
   const router = useRouter();
-  const [step, setStep] = React.useState(1);
   const [errors, setErrors] = React.useState({});
   const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
   const [formData, setFormData] = React.useState({
-    // Step 1
     jobPosition: "",
     jobDescription: "",
     experienceLevel: "",
-    
-    // Step 2
     interviewDuration: "",
-    interviewType: [], // Changed to an array to store multiple selected types
-    difficultyLevel: "",
-    
-    // Step 3
-    requiredSkills: "",
-    topicsTocover: "",
-    interviewFormat: "",
-    additionalNotes: ""
+    difficultyLevel: ""
   });
 
   const updateFormData = (field, value) => {
@@ -42,77 +37,45 @@ function CreateInterview() {
       [field]: undefined
     }));
 
-    if (field === 'interviewType') {
-      // Special handling for interviewType as it's an array
-      setFormData(prev => {
-        const currentTypes = [...prev.interviewType];
-        if (currentTypes.includes(value)) {
-          // If type already exists, remove it (toggle)
-          return {
-            ...prev,
-            interviewType: currentTypes.filter(type => type !== value)
-          };
-        } else {
-          // Add the new type
-          return {
-            ...prev,
-            interviewType: [...currentTypes, value]
-          };
-        }
-      });
-    } else {
-      // Normal handling for other fields
-      setFormData(prev => ({
-        ...prev,
-        [field]: value
-      }));
-    }
-  };
 
-  // Validate form fields for the current step
-  const validateStep = (currentStep) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }
+  
+
+  // Validate all required form fields
+  const validateForm = () => {
     const newErrors = {};
     let isValid = true;
 
-    if (currentStep === 1) {
-      if (!formData.jobPosition.trim()) {
-        newErrors.jobPosition = "Job position is required";
-        isValid = false;
-      }
-      if (!formData.jobDescription.trim()) {
-        newErrors.jobDescription = "Job description is required";
-        isValid = false;
-      }
-      if (!formData.experienceLevel) {
-        newErrors.experienceLevel = "Experience level is required";
-        isValid = false;
-      }
+    console.log("🔍 Validating form fields:", formData);
+
+    if (!formData.jobPosition.trim()) {
+      newErrors.jobPosition = "Job position is required";
+      isValid = false;
     }
-    else if (currentStep === 2) {
-      if (!formData.interviewDuration) {
-        newErrors.interviewDuration = "Interview duration is required";
-        isValid = false;
-      }
-      if (formData.interviewType.length === 0) {
-        newErrors.interviewType = "At least one interview type is required";
-        isValid = false;
-      }
-      if (!formData.difficultyLevel) {
-        newErrors.difficultyLevel = "Difficulty level is required";
-        isValid = false;
-      }
+    if (!formData.jobDescription.trim()) {
+      newErrors.jobDescription = "Job description is required";
+      isValid = false;
     }
-    else if (currentStep === 3) {
-      // Step 3 validation (only required fields)
-      if (!formData.requiredSkills.trim()) {
-        newErrors.requiredSkills = "Required skills are needed";
-        isValid = false;
-      }
-      if (!formData.interviewFormat) {
-        newErrors.interviewFormat = "Interview format is required";
-        isValid = false;
-      }
+    if (!formData.experienceLevel) {
+      newErrors.experienceLevel = "Experience level is required";
+      isValid = false;
     }
+    if (!formData.interviewDuration) {
+      newErrors.interviewDuration = "Interview duration is required";
+      isValid = false;
+    }
+
+    if (!formData.difficultyLevel) {
+      newErrors.difficultyLevel = "Difficulty level is required";
+      isValid = false;
+    }
+
+    console.log("📋 Validation errors:", newErrors);
+    console.log("✅ Form is valid:", isValid);
 
     setErrors(newErrors);
     return isValid;
@@ -134,7 +97,7 @@ function CreateInterview() {
         duration: 5000,
         action: {
           label: "Add Credits",
-          onClick: () => router.push('/dashboard/billing') 
+          onClick: () => router.push('/billing') 
         }
       });
       return false;
@@ -143,19 +106,22 @@ function CreateInterview() {
     return true;
   };
 
-  const handleNextStep = () => {
-    if (step < 3) {
-      if (validateStep(step)) {
-        setStep(step + 1);
+  const handleCreateInterview = () => {
+    console.log("🔍 handleCreateInterview called");
+    console.log("📝 Form data:", formData);
+    
+    // Validate form and check credits
+    if (validateForm()) {
+      console.log("✅ Form validation passed");
+      if (checkUserCredits()) {
+        console.log("✅ Credit check passed");
+        setShowConfirmationModal(true);
+      } else {
+        console.log("❌ Credit check failed");
       }
     } else {
-      // Final submission - Check credits first
-      if (validateStep(step)) {
-        // Check credits before showing confirmation modal
-        if (checkUserCredits()) {
-          setShowConfirmationModal(true);
-        }
-      }
+      console.log("❌ Form validation failed");
+      console.log("🚨 Validation errors:", errors);
     }
   };
 
@@ -163,6 +129,7 @@ function CreateInterview() {
   const [generationError, setGenerationError] = React.useState(null);
   const [generatedQuestions, setGeneratedQuestions] = React.useState(null);
   const [showQuestionList, setShowQuestionList] = React.useState(false);
+  const [currentInterviewId, setCurrentInterviewId] = React.useState(null);
 
   const handleFinalSubmit = async () => {
     try {
@@ -176,7 +143,13 @@ function CreateInterview() {
       // Clear console to make output more visible
       console.clear();
       console.log("%c Submitting form data to AI...", "color: blue; font-size: 16px;");
-      console.table(formData);
+      
+      // Prepare the form data with defaults for optional fields that the API expects
+      const submissionData = {
+        ...formData,
+      };
+      
+      console.table(submissionData);
       
       // Submit the form data to the API
       const response = await fetch('/api/ai-model', {
@@ -184,7 +157,7 @@ function CreateInterview() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submissionData),
       });
       
       if (!response.ok) {
@@ -209,13 +182,10 @@ function CreateInterview() {
           .from('InterviewDetails')
           .insert({
             interview_id: interviewId,
-            job_position: formData.jobPosition,
-            job_description: formData.jobDescription,
-            experience_level: formData.experienceLevel,
-            interview_time: parseInt(formData.interviewDuration) || 30,
-            interview_type: Array.isArray(formData.interviewType) 
-              ? formData.interviewType.join(', ') 
-              : formData.interviewType,
+            job_position: submissionData.jobPosition,
+            job_description: submissionData.jobDescription,
+            experience_level: submissionData.experienceLevel,
+            interview_time: extractDurationMinutes(submissionData.interviewDuration),
             interview_questions: result.questions,
             user_email: userEmail
           })
@@ -249,8 +219,9 @@ function CreateInterview() {
           }
         }
         
-        // Store the generated questions
+        // Store the generated questions and interview ID
         setGeneratedQuestions(result.questions);
+        setCurrentInterviewId(interviewId);
         
         // Close the confirmation modal and show the questions list
         setShowConfirmationModal(false);
@@ -271,23 +242,35 @@ function CreateInterview() {
   };
   
   return (
-    <div className='w-full px-10 md:px-24 lg:px-44 xl:px-56 pt-4'>
-        <div className='flex items-center gap-2 mb-6'>
-            <ArrowLeft onClick={() => router.back()} className='cursor-pointer'/>
-            <h2 className='text-2xl font-bold text-gray-800'>Create Interview</h2>
+    <div className='w-full px-6 md:px-12 lg:px-24 xl:px-32 pt-4 max-w-6xl mx-auto'>
+        <div className='flex items-center gap-3 mb-6'>
+            <ArrowLeft 
+              onClick={() => router.back()} 
+              className='cursor-pointer hover:bg-gray-100 rounded-lg p-2 transition-colors' 
+              size={36}
+            />
+            <div>
+              <h1 className='text-3xl font-bold text-gray-800'>Create New Interview</h1>
+              <p className='text-gray-600 text-sm mt-1'>Generate personalized questions for your interview practice</p>
+            </div>
         </div>
 
         {/* Display user credits */}
         {user?.user && (
-          <div className='mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+          <div className='mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg'>
             <div className='flex items-center justify-between'>
-              <span className='text-sm text-blue-700'>
-                Available Credits: <strong>{user.user.credits || 0}</strong>
-              </span>
+              <div className='flex items-center gap-2'>
+                <span className='text-sm text-blue-700'>
+                  Available Credits: <strong className='text-lg'>{user.user.credits || 0}</strong>
+                </span>
+                <span className='text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded'>
+                  1 credit per interview
+                </span>
+              </div>
               {(user.user.credits || 0) <= 0 && (
                 <button 
                   onClick={() => router.push('/billing')}
-                  className='text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700'
+                  className='text-xs bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors'
                 >
                   Add Credits
                 </button>
@@ -297,38 +280,36 @@ function CreateInterview() {
         )}
         
         <FormContainer 
-          step={step} 
           formData={formData} 
           updateFormData={updateFormData}
           errors={errors}
         />
         
-        <div className='mt-6'>
-            <div className='flex items-center justify-between mb-2'>
-                <div className='text-sm text-gray-500'>Step {step} of 3</div>
-                <div className='text-sm text-gray-500'>{Math.round(step*33.33)}% Complete</div>
-            </div>
-            <Progress value={step*33.33} className='w-full' />
-            <div className='mt-6 flex justify-between'>
-                <button 
-                    onClick={() => step > 1 && setStep(step - 1)} 
-                    className={`px-4 py-2 border border-gray-300 rounded-md ${step === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
-                    disabled={step === 1}
-                >
-                    Previous
-                </button>
-                <button 
-                    onClick={handleNextStep} 
-                    className={`px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 ${
-                      step === 3 && (!user?.user || user.user.credits <= 0) 
-                        ? 'opacity-50 cursor-not-allowed' 
-                        : ''
-                    }`}
-                    disabled={step === 3 && (!user?.user || user.user.credits <= 0)}
-                >
-                    {step === 3 ? 'Finish' : 'Next'}
-                </button>
-            </div>
+        <div className='mt-8 text-center'>
+          <p className='text-gray-600 mb-4 text-sm'>
+            Ready to create your interview? Make sure all required fields (*) are filled out.
+          </p>
+          <button 
+            onClick={() => {
+              console.log("🎯 Button clicked!");
+              console.log("👤 User:", user);
+              console.log("💰 Credits:", user?.user?.credits);
+              handleCreateInterview();
+            }} 
+            className={`px-12 py-4 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl font-semibold text-lg transition-all duration-200 ${
+              (!user?.user || user.user.credits <= 0) 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:shadow-xl hover:scale-105 hover:from-primary/90 hover:to-primary/70'
+            }`}
+            disabled={!user?.user || user.user.credits <= 0}
+          >
+            🚀 Create Interview Questions
+          </button>
+          {(!user?.user || user.user.credits <= 0) && (
+            <p className='text-red-500 text-sm mt-2'>
+              You need at least 1 credit to create an interview
+            </p>
+          )}
         </div>
 
         {/* Confirmation Modal */}
@@ -348,9 +329,14 @@ function CreateInterview() {
             questions={generatedQuestions}
             formData={formData}
             isLoading={isSubmitting}
+            interviewId={currentInterviewId}
             onClose={() => {
               setShowQuestionList(false);
               router.push('/dashboard');
+            }}
+            onStartInterview={(interviewId) => {
+              setShowQuestionList(false);
+              router.push(`/interview/${interviewId}`);
             }}
           />
         </>

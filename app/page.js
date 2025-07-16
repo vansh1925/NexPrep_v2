@@ -465,11 +465,11 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
               <div className="flex items-center justify-center gap-3 bg-white rounded-xl p-4 shadow-sm">
                 <CheckCircle className="w-6 h-6 text-green-500" />
-                <span className="text-gray-700 font-medium">Every new user gets <strong>3 free interviews</strong></span>
+                <span className="text-gray-700 font-medium">Every new user gets <strong>1 free interview</strong></span>
               </div>
               <div className="flex items-center justify-center gap-3 bg-white rounded-xl p-4 shadow-sm">
                 <Clock className="w-6 h-6 text-blue-500" />
-                <span className="text-gray-700 font-medium">Once they're used, you can <strong>buy more credits</strong></span>
+                <span className="text-gray-700 font-medium">Once it is used, you can <strong>buy more credits</strong></span>
               </div>
               <div className="flex items-center justify-center gap-3 bg-white rounded-xl p-4 shadow-sm">
                 <CreditCard className="w-6 h-6 text-purple-500" />
