@@ -25,6 +25,7 @@ function Interview() {
   const [showChat, setShowChat] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
   const [isTimerActive, setIsTimerActive] = useState(false);
+  const [showEndConfirmation, setShowEndConfirmation] = useState(false);
 
   const [Conversation, setConversation] = useState([]);
 
@@ -172,21 +173,26 @@ Key Guidelines:
 
 
   // Simple function to end the call
-  const handleEndCall =async  () => {
-    if (confirm('Are you sure you want to end this interview?')) {
-      try {
-        if (vapiInstance) {
-          vapiInstance.stop();
-        }
-        await GenerateFeedback();
-        router.push(`/interview/${interview_id}/feedback`);
+  const handleEndCall = () => {
+    setShowEndConfirmation(true);
+  };
 
-      } catch (error) {
-        console.error("Error stopping VAPI call:", error);
-        router.push(`/interview/${interview_id}/feedback`);
-
+  const confirmEndCall = async () => {
+    setShowEndConfirmation(false);
+    try {
+      if (vapiInstance) {
+        vapiInstance.stop();
       }
+      await GenerateFeedback();
+      router.push(`/interview/${interview_id}/feedback`);
+    } catch (error) {
+      console.error("Error stopping VAPI call:", error);
+      router.push(`/interview/${interview_id}/feedback`);
     }
+  };
+
+  const cancelEndCall = () => {
+    setShowEndConfirmation(false);
   };
   const GenerateFeedback = async () => {
     if (!interviewData || !vapiInstance) {
@@ -387,6 +393,35 @@ Key Guidelines:
   // Main UI
   return (
     <div className="bg-gradient-to-b from-gray-900 to-gray-800 min-h-screen text-white">
+      {/* End Interview Confirmation Modal */}
+      {showEndConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md mx-4 text-center">
+            <div className="text-red-500 mx-auto mb-4 w-16 h-16 flex items-center justify-center rounded-full bg-red-500/20">
+              <PhoneOff className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">End Interview?</h3>
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to end this interview? Your responses will be saved and feedback will be generated.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={cancelEndCall}
+                className="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                No, Continue
+              </button>
+              <button 
+                onClick={confirmEndCall}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Yes, End Interview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header with timer and controls */}
       <div className="bg-gray-800 p-4 shadow-md flex items-center justify-between">
         <div className="flex items-center">
