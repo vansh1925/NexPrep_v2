@@ -1,6 +1,6 @@
 # NexPrep - AI-Powered Interview Preparation Platform
 
-![NexPrep Banner](public/NexprepLogo.png.png)
+![NexPrep Banner](public/NexprepLogo.png)
 
 **NexPrep** is a cutting-edge SaaS platform that leverages artificial intelligence to provide personalized interview preparation experiences. Our platform helps job seekers practice, improve, and succeed in their interviews through AI-driven mock interviews, real-time feedback, and comprehensive performance analytics.
 
