@@ -19,7 +19,7 @@ export async function POST(req) {
         const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })
         
         const response = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
+            model: "gemini-2.0-flash-exp",
             contents: [{ role: "user", parts: [{ text: prompt }] }],
         });
         
