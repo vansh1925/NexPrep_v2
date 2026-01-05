@@ -65,7 +65,7 @@ export async function POST(req) {
             questions: questionsData,
             rawResponse: response.text, // Include raw response for debugging
             metadata: {
-                model: "gemini-2.0-flash-lite",
+                model: "gemini-2.0-flash-exp",
                 jobPosition: formData.jobPosition,
                 difficultyLevel: formData.difficultyLevel
             }
