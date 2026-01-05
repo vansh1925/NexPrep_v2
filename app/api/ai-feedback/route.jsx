@@ -44,7 +44,9 @@ Only output a valid JSON object with the structure above. Do not include explana
 export async function POST(req) {
   try {
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ 
+        model: "models/gemini-1.0-pro"
+    });
 
     const body = await req.json(); // Parse the request body
     if (!body?.conversation) {

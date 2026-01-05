@@ -17,7 +17,10 @@ export async function POST(req) {
         
         // Initialize the AI client
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        // Use the full model path with models/ prefix
+        const model = genAI.getGenerativeModel({ 
+            model: "models/gemini-1.0-pro"
+        });
         
         // Retry logic for rate limiting
         let response;
@@ -84,7 +87,7 @@ export async function POST(req) {
             questions: questionsData,
             rawResponse: response.text(), // Include raw response for debugging
             metadata: {
-                model: "gemini-pro",
+                model: "gemini-1.0-pro",
                 jobPosition: formData.jobPosition,
                 difficultyLevel: formData.difficultyLevel
             }
