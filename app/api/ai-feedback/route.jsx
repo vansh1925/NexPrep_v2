@@ -1,6 +1,5 @@
 
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 
 function constructInterviewPrompt() {
     return `You are an AI Interview Evaluator.
@@ -43,9 +42,9 @@ Only output a valid JSON object with the structure above. Do not include explana
 }
 export async function POST(req) {
   try {
-    const openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-    });
+    if (!process.env.GOOGLE_GENAI_API_KEY) {
+        throw new Error("GOOGLE_GENAI_API_KEY is not configured");
+    }
 
     const body = await req.json(); // Parse the request body
     if (!body?.conversation) {
@@ -60,16 +59,30 @@ export async function POST(req) {
     const finalprompt = prompt.replace("{{conversation}}", conversationString);
     console.log("Final Prompt:", finalprompt);
     
-    const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-            { role: "system", content: "You are an expert AI interview evaluator." },
-            { role: "user", content: finalprompt }
-        ],
-        temperature: 0.7,
-    });
-
-    let cleanedContent = completion.choices[0].message.content;
+    // Direct REST API call to Google Gemini
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${process.env.GOOGLE_GENAI_API_KEY}`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: finalprompt }]
+                }]
+            })
+        }
+    );
+    
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`API Error: ${response.status} - ${JSON.stringify(errorData)}`);
+    }
+    
+    const data = await response.json();
+    let cleanedContent = data.candidates[0].content.parts[0].text;
+    
     cleanedContent = cleanedContent
       .replace(/```json\s*/g, "")
       .replace(/```\s*$/g, "")
