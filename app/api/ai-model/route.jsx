@@ -1,6 +1,6 @@
 
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
 export async function POST(req) {
     try {
@@ -15,22 +15,27 @@ export async function POST(req) {
         // Construct the prompt based on form data
         const prompt = constructInterviewPrompt(formData);
         
-        // Initialize the AI client
-        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
-        // Use the full model path with models/ prefix
-        const model = genAI.getGenerativeModel({ 
-            model: "models/gemini-1.0-pro"
+        // Initialize OpenAI client
+        const openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
         });
         
         // Retry logic for rate limiting
-        let response;
+        let responseText;
         let attempts = 0;
         const maxAttempts = 3;
         
         while (attempts < maxAttempts) {
             try {
-                const result = await model.generateContent(prompt);
-                response = await result.response;
+                const completion = await openai.chat.completions.create({
+                    model: "gpt-3.5-turbo",
+                    messages: [
+                        { role: "system", content: "You are an expert AI interview engineer." },
+                        { role: "user", content: prompt }
+                    ],
+                    temperature: 0.7,
+                });
+                responseText = completion.choices[0].message.content;
                 break; // Success, exit retry loop
             } catch (error) {
                 attempts++;
@@ -45,12 +50,13 @@ export async function POST(req) {
             }
         }
         
+        if (!responseText) {
+            throw new Error("Failed to generate content after retries");
+        }
+        
         let questionsData;
         
         try {
-            // Get the response text
-            let responseText = response.text();
-            
             // Clean the raw text to ensure it is a valid JSON array from beginning to end
             const cleanText = responseText.replace(/^```json\s*/, "") // remove starting ```json
                                          .replace(/```$/, "") // remove ending ```
@@ -63,7 +69,7 @@ export async function POST(req) {
             console.log("Initial parse failed:", initialError);
             
             // If that fails, try to extract just the array part
-            const jsonMatch = response.text().match(/\[[\s\S]*\]/);
+            const jsonMatch = responseText.match(/\[[\s\S]*\]/);
             if (jsonMatch) {
                 questionsData = JSON.parse(jsonMatch[0]);
             } else {
@@ -85,9 +91,9 @@ export async function POST(req) {
         return NextResponse.json({ 
             success: true, 
             questions: questionsData,
-            rawResponse: response.text(), // Include raw response for debugging
+            rawResponse: responseText, // Include raw response for debugging
             metadata: {
-                model: "gemini-1.0-pro",
+                model: "gpt-3.5-turbo",
                 jobPosition: formData.jobPosition,
                 difficultyLevel: formData.difficultyLevel
             }
@@ -96,7 +102,7 @@ export async function POST(req) {
     } catch (error) {
         console.error("Error generating interview questions:", error);
         console.error("Error details:", error.stack);
-        console.error("API Key present:", !!process.env.GOOGLE_GENAI_API_KEY);
+        console.error("API Key present:", !!process.env.OPENAI_API_KEY);
         
         // Provide user-friendly error messages
         let errorMessage = error.message;

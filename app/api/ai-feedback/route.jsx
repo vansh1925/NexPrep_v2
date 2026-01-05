@@ -1,6 +1,6 @@
 
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
 function constructInterviewPrompt() {
     return `You are an AI Interview Evaluator.
@@ -43,9 +43,8 @@ Only output a valid JSON object with the structure above. Do not include explana
 }
 export async function POST(req) {
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
-    const model = genAI.getGenerativeModel({ 
-        model: "models/gemini-1.0-pro"
+    const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
     });
 
     const body = await req.json(); // Parse the request body
@@ -61,10 +60,16 @@ export async function POST(req) {
     const finalprompt = prompt.replace("{{conversation}}", conversationString);
     console.log("Final Prompt:", finalprompt);
     
-    const result = await model.generateContent(finalprompt);
-    const response = await result.response;
+    const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+            { role: "system", content: "You are an expert AI interview evaluator." },
+            { role: "user", content: finalprompt }
+        ],
+        temperature: 0.7,
+    });
 
-    let cleanedContent = response.text();
+    let cleanedContent = completion.choices[0].message.content;
     cleanedContent = cleanedContent
       .replace(/```json\s*/g, "")
       .replace(/```\s*$/g, "")
