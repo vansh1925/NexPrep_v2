@@ -3,8 +3,12 @@ import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai"
 
 export async function POST(req) {
-    const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })
     try {
+        // Check for API key
+        if (!process.env.GOOGLE_GENAI_API_KEY) {
+            throw new Error("GOOGLE_GENAI_API_KEY is not configured");
+        }
+
         // Parse the form data from the request
         const formData = await req.json();
         
@@ -12,11 +16,11 @@ export async function POST(req) {
         const prompt = constructInterviewPrompt(formData);
         
         // Initialize the AI client
+        const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })
+        
         const response = await ai.models.generateContent({
-            model: "gemini-2.0-flash-lite",
-            contents: prompt,
-            // maxOutputTokens: 1000,
-            // temperature: 0.7
+            model: "gemini-1.5-flash",
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
         });
         
         let questionsData;
@@ -69,8 +73,10 @@ export async function POST(req) {
         
     } catch (error) {
         console.error("Error generating interview questions:", error);
+        console.error("Error details:", error.stack);
+        console.error("API Key present:", !!process.env.GOOGLE_GENAI_API_KEY);
         return NextResponse.json(
-            { success: false, error: error.message },
+            { success: false, error: error.message, details: error.toString() },
             { status: 500 }
         );
     }
