@@ -58,7 +58,7 @@ export async function POST(req) {
     const finalprompt = prompt.replace("{{conversation}}", conversationString);
     console.log("Final Prompt:", finalprompt);
     const completion =  await ai.models.generateContent({
-            model: "gemini-2.0-flash-lite",
+            model: "gemini-1.5-flash",
             contents: prompt,
             // maxOutputTokens: 1000,
             // temperature: 0.7

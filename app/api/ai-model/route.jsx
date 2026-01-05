@@ -18,10 +18,30 @@ export async function POST(req) {
         // Initialize the AI client
         const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })
         
-        const response = await ai.models.generateContent({
-            model: "gemini-2.0-flash-exp",
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-        });
+        // Retry logic for rate limiting
+        let response;
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+            try {
+                response = await ai.models.generateContent({
+                    model: "gemini-1.5-flash",
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                });
+                break; // Success, exit retry loop
+            } catch (error) {
+                attempts++;
+                if (error.status === 429 && attempts < maxAttempts) {
+                    // Rate limit hit, wait and retry
+                    const waitTime = Math.pow(2, attempts) * 1000; // Exponential backoff
+                    console.log(`Rate limit hit, retrying in ${waitTime}ms (attempt ${attempts}/${maxAttempts})`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                } else {
+                    throw error; // Re-throw if not rate limit or max attempts reached
+                }
+            }
+        }
         
         let questionsData;
         
@@ -65,7 +85,7 @@ export async function POST(req) {
             questions: questionsData,
             rawResponse: response.text, // Include raw response for debugging
             metadata: {
-                model: "gemini-2.0-flash-exp",
+                model: "gemini-1.5-flash",
                 jobPosition: formData.jobPosition,
                 difficultyLevel: formData.difficultyLevel
             }
@@ -75,9 +95,27 @@ export async function POST(req) {
         console.error("Error generating interview questions:", error);
         console.error("Error details:", error.stack);
         console.error("API Key present:", !!process.env.GOOGLE_GENAI_API_KEY);
+        
+        // Provide user-friendly error messages
+        let errorMessage = error.message;
+        let statusCode = 500;
+        
+        if (error.status === 429) {
+            errorMessage = "Rate limit exceeded. Please wait a moment and try again.";
+            statusCode = 429;
+        } else if (error.status === 404) {
+            errorMessage = "AI model not found. Please contact support.";
+            statusCode = 500;
+        }
+        
         return NextResponse.json(
-            { success: false, error: error.message, details: error.toString() },
-            { status: 500 }
+            { 
+                success: false, 
+                error: errorMessage, 
+                details: error.toString(),
+                code: error.status 
+            },
+            { status: statusCode }
         );
     }
 }
