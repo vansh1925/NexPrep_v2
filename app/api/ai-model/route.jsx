@@ -1,6 +1,6 @@
 
 import { NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai"
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req) {
     try {
@@ -16,7 +16,8 @@ export async function POST(req) {
         const prompt = constructInterviewPrompt(formData);
         
         // Initialize the AI client
-        const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })
+        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         
         // Retry logic for rate limiting
         let response;
@@ -25,10 +26,8 @@ export async function POST(req) {
         
         while (attempts < maxAttempts) {
             try {
-                response = await ai.models.generateContent({
-                    model: "gemini-1.5-flash",
-                    contents: [{ role: "user", parts: [{ text: prompt }] }],
-                });
+                const result = await model.generateContent(prompt);
+                response = await result.response;
                 break; // Success, exit retry loop
             } catch (error) {
                 attempts++;
@@ -47,7 +46,7 @@ export async function POST(req) {
         
         try {
             // Get the response text
-            let responseText = response.text;
+            let responseText = response.text();
             
             // Clean the raw text to ensure it is a valid JSON array from beginning to end
             const cleanText = responseText.replace(/^```json\s*/, "") // remove starting ```json
@@ -61,7 +60,7 @@ export async function POST(req) {
             console.log("Initial parse failed:", initialError);
             
             // If that fails, try to extract just the array part
-            const jsonMatch = response.text.match(/\[[\s\S]*\]/);
+            const jsonMatch = response.text().match(/\[[\s\S]*\]/);
             if (jsonMatch) {
                 questionsData = JSON.parse(jsonMatch[0]);
             } else {
@@ -83,7 +82,7 @@ export async function POST(req) {
         return NextResponse.json({ 
             success: true, 
             questions: questionsData,
-            rawResponse: response.text, // Include raw response for debugging
+            rawResponse: response.text(), // Include raw response for debugging
             metadata: {
                 model: "gemini-1.5-flash",
                 jobPosition: formData.jobPosition,
