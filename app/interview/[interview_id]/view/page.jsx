@@ -69,7 +69,7 @@ function ViewInterview() {
         .from('postinterview')
         .select("interview_id, interview_review")
         .eq('interview_id', interviewId)
-        .single();
+        .maybeSingle();
 
       if (feedbackData && feedbackData.interview_review) {
         try {

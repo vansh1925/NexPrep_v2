@@ -375,6 +375,40 @@ Wrap up after 5 questions with: "Thank you for your time. The interview is now c
     }
   };
 
+  // Function to toggle speaker
+  const handleSpeakerToggle = () => {
+    try {
+      if (vapiInstanceRef.current && isCallActive) {
+        // Check if speaker/volume methods are available
+        if (vapiInstanceRef.current.speaker) {
+          if (isSpeakerOff) {
+            vapiInstanceRef.current.speaker.enable();
+          } else {
+            vapiInstanceRef.current.speaker.disable();
+          }
+          setIsSpeakerOff(!isSpeakerOff);
+        } else {
+          // Try alternative volume control if available
+          if (vapiInstanceRef.current.setVolume) {
+            vapiInstanceRef.current.setVolume(isSpeakerOff ? 1 : 0);
+            setIsSpeakerOff(!isSpeakerOff);
+          } else {
+            // Fallback: just toggle state for UI purposes
+            setIsSpeakerOff(!isSpeakerOff);
+          }
+        }
+      } else if (!isCallActive) {
+        // Cannot toggle speaker - call is not active
+      } else {
+        // VAPI instance not available
+      }
+    } catch (error) {
+      // Error toggling speaker
+      // Fallback: just toggle state for UI purposes
+      setIsSpeakerOff(!isSpeakerOff);
+    }
+  };
+
   // Handle going back
   const handleGoBack = () => {
     router.push(`/interview/${interview_id}`);

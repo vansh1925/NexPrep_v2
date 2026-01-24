@@ -59,7 +59,7 @@ function AllInterviews() {
             .from('postinterview')
             .select('interview_review')
             .eq('interview_id', interview.interview_id)
-            .single();
+            .maybeSingle();
 
           let parsedFeedback = null;
           if (feedbackData?.interview_review) {

@@ -21,8 +21,7 @@ function Feedback() {
         .from('postinterview')
         .select("interview_id, interview_review")
         .eq('interview_id', interview_id)
-        .order('created_at', { ascending: false }) // Get the most recent feedback
-        .limit(1);
+        .maybeSingle();
 
       if (error) {
         // Supabase error occurred
