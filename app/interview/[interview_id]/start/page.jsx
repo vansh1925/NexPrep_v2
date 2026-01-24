@@ -210,14 +210,50 @@ Wrap up after 5 questions with: "Thank you for your time. The interview is now c
           alert("Failed to start the interview call. Please check your microphone and try again.");
         });
       
-      // Enhanced message handling
+      // Enhanced message and transcript handling
       vapiInstanceRef.current.on('message', (message) => {
         try {
           if (message?.conversation) {
             setConversation(prev => [...prev, ...message.conversation]);
           }
+          // Also capture any transcript data
+          if (message?.transcript) {
+            setConversation(prev => [...prev, {
+              role: message.transcript.role || 'user',
+              content: message.transcript.text || message.transcript.content || ''
+            }]);
+          }
         } catch (msgError) {
           // Error handling message - continue silently
+        }
+      });
+      
+      // Add transcript handler as backup
+      vapiInstanceRef.current.on('transcript', (transcript) => {
+        try {
+          if (transcript?.text || transcript?.content) {
+            setConversation(prev => [...prev, {
+              role: transcript.role || 'user',
+              content: transcript.text || transcript.content || ''
+            }]);
+          }
+        } catch (transcriptError) {
+          // Error handling transcript - continue silently
+        }
+      });
+      
+      // Add speech handlers for additional data capture
+      vapiInstanceRef.current.on('speech-start', (data) => {
+        // Speech started - could capture metadata
+      });
+      
+      vapiInstanceRef.current.on('speech-end', (data) => {
+        // Speech ended - could capture final transcript
+        if (data?.transcript) {
+          setConversation(prev => [...prev, {
+            role: 'user',
+            content: data.transcript
+          }]);
         }
       });
       
@@ -258,9 +294,13 @@ Wrap up after 5 questions with: "Thank you for your time. The interview is now c
     setShowEndConfirmation(false);
   };
   const GenerateFeedback = async () => {
-    if (!interviewData || !vapiInstanceRef.current) {
+    if (!interviewData) {
+      alert('No interview data available for feedback generation');
       return;
     }
+    
+    // Debug: Check conversation data
+    alert(`Generating feedback with ${Conversation.length} conversation items`);
     
     try {
       // Check if feedback already exists for this interview
@@ -271,26 +311,29 @@ Wrap up after 5 questions with: "Thank you for your time. The interview is now c
         .limit(1);
         
       if (checkError && checkError.code !== 'PGRST116') {
-        // Error checking existing feedback
+        alert('Error checking existing feedback: ' + checkError.message);
+        return;
       }
       
       if (existingFeedback && existingFeedback.length > 0) {
+        alert('Feedback already exists for this interview');
         return;
       }
       
       // Check if we have conversation data
       if (!Conversation || Conversation.length === 0) {
+        alert('No conversation data found. Creating default feedback.');
         // Create a default feedback entry to avoid errors
         const defaultFeedback = {
           feedback: {
-            summary: "Interview completed but no conversation data was recorded.",
-            recommendation: "Incomplete",
-            recommendationMsg: "Unable to provide feedback due to missing conversation data.",
+            summary: "Interview completed but no conversation data was recorded. This might be due to technical issues or the interview ending too quickly.",
+            recommendation: "Retry",
+            recommendationMsg: "Please try the interview again to ensure proper conversation recording.",
             rating: {
-              technicalSkills: 0,
-              communication: 0,
-              problemSolving: 0,
-              overall: 0
+              technicalSkills: 3,
+              communication: 3,
+              problemSolving: 3,
+              experience: 3
             }
           }
         };
@@ -305,11 +348,14 @@ Wrap up after 5 questions with: "Thank you for your time. The interview is now c
           ]);
           
         if (insertError) {
-          // Error inserting default feedback
+          alert('Error inserting default feedback: ' + insertError.message);
+        } else {
+          alert('Default feedback created successfully');
         }
         return;
       }
 
+      alert('Calling AI feedback API with conversation data...');
       const result = await fetch('/api/ai-feedback', {
         method: 'POST',
         headers: {
@@ -321,15 +367,20 @@ Wrap up after 5 questions with: "Thank you for your time. The interview is now c
       });
       
       if (!result.ok) {
+        const errorText = await result.text();
+        alert(`API request failed with status ${result.status}: ${errorText}`);
         throw new Error(`API request failed with status ${result.status}`);
       }
       
       const data = await result.json();
+      alert('AI feedback generated successfully!');
       
       if (!data || typeof data !== 'object') {
+        alert('Invalid feedback data received from API');
         throw new Error("Invalid feedback data received from API");
       }
       
+      alert('Saving feedback to database...');
       const { error: insertError } = await supabase
         .from('postinterview')
         .insert([
@@ -340,10 +391,14 @@ Wrap up after 5 questions with: "Thank you for your time. The interview is now c
         ]);
         
       if (insertError) {
+        alert('Database insert failed: ' + insertError.message);
         throw new Error(`Database insert failed: ${insertError.message}`);
+      } else {
+        alert('Feedback saved successfully!');
       }
         
     } catch (error) {
+      alert('Error in feedback generation: ' + error.message);
       
       // Create a fallback feedback entry so the feedback page doesn't crash
       try {
@@ -355,19 +410,21 @@ Wrap up after 5 questions with: "Thank you for your time. The interview is now c
           .limit(1);
           
         if (doubleCheck && doubleCheck.length > 0) {
+          alert('Feedback already exists, skipping fallback creation');
           return;
         }
         
+        alert('Creating fallback feedback...');
         const fallbackFeedback = {
           feedback: {
-            summary: "Interview completed but feedback generation encountered an error.",
+            summary: "Interview completed but feedback generation encountered an error: " + error.message,
             recommendation: "Review Required",
             recommendationMsg: "Manual review needed due to technical issues with feedback generation.",
             rating: {
               technicalSkills: 5,
               communication: 5,
               problemSolving: 5,
-              overall: 5
+              experience: 5
             }
           },
           error: error.message
@@ -383,10 +440,12 @@ Wrap up after 5 questions with: "Thank you for your time. The interview is now c
           ]);
           
         if (fallbackError) {
-          // Error inserting fallback feedback
+          alert('Error inserting fallback feedback: ' + fallbackError.message);
+        } else {
+          alert('Fallback feedback created successfully');
         }
       } catch (fallbackError) {
-        // Failed to insert fallback feedback
+        alert('Failed to insert fallback feedback: ' + fallbackError.message);
       }
     }
   };

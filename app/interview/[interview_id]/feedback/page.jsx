@@ -34,7 +34,7 @@ function Feedback() {
       }
 
       // Handle the array response from limit(1)
-      const feedbackEntry = data && data.length > 0 ? data[0] : null;
+      const feedbackEntry = data; // maybeSingle returns single object, not array
       
       if (feedbackEntry && feedbackEntry.interview_review) {
         // Parse the interview_review JSON if it's a string
