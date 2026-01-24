@@ -23,23 +23,21 @@ function QuestionList({ questions = [], formData = {}, isLoading = false, onClos
                 cleanJson = cleanJson.replace(/<\/?[^>]+(>|$)/g, '');
                 
                 // Try to parse the cleaned JSON
-                console.log("Attempting to parse cleaned JSON:", cleanJson);
                 return JSON.parse(cleanJson);
             } catch (firstError) {
-                console.error("Failed to parse cleaned JSON:", firstError);
+                // Failed to parse cleaned JSON
                 
                 try {
                     // If that fails, try to extract just the array part
                     const arrayMatch = questions.match(/\[\s*\{.*\}\s*\]/s);
                     if (arrayMatch) {
-                        console.log("Attempting to parse extracted array:", arrayMatch[0]);
                         return JSON.parse(arrayMatch[0]);
                     }
                 } catch (secondError) {
-                    console.error("Failed to parse extracted array:", secondError);
+                    // Failed to parse extracted array
                 }
                 
-                console.error("All parsing attempts failed for:", questions);
+                // All parsing attempts failed
                 return [];
             }
         }
@@ -231,7 +229,7 @@ function QuestionList({ questions = [], formData = {}, isLoading = false, onClos
                                     if (interviewId && onStartInterview) {
                                         onStartInterview(interviewId);
                                     } else {
-                                        console.error("Interview ID not found or onStartInterview not provided");
+                                        // Interview ID not found or onStartInterview not provided
                                         onClose();
                                     }
                                 }}

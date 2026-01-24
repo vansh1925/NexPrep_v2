@@ -27,13 +27,13 @@ function Interview() {
         .single();
       
       if (error) {
-        console.error('Error fetching interview details:', error);
+        // Error fetching interview details
       } else {
-        console.log("Retrieved interview data:", data);
+        // Retrieved interview data successfully
         setInterviewDetails(data);
       }
     } catch (error) {
-      console.error('Error fetching interview details:', error);
+      // Error fetching interview details
     } finally {
       setLoading(false); 
     }
@@ -48,18 +48,18 @@ function Interview() {
       .eq('interview_id', interview_id);
       
     if (error) {
-      console.error("Error fetching interview data:", error);
+      // Error fetching interview data
       setLoading(false);
       return;
     }
     
     if (!Interviewdata || Interviewdata.length === 0) {
-      console.error("No interview data found");
+      // No interview data found
       setLoading(false);
       return;
     }
     
-    console.log("Interview data fetched:", Interviewdata);
+    // Interview data fetched successfully
     
     setInterviewData({
       username: name,
@@ -73,7 +73,7 @@ function Interview() {
     }, 300);
 
   } catch (error) {
-    console.error("Error in handleStartInterview:", error);
+    // Error in handleStartInterview
     setLoading(false);
   }};
 

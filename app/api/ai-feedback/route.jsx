@@ -1,5 +1,6 @@
 
 import { NextResponse } from "next/server";
+import { API_CONFIG, ERROR_MESSAGES } from '@/lib/constants';
 
 function constructInterviewPrompt() {
     return `You are an AI Interview Evaluator.
@@ -42,8 +43,8 @@ Only output a valid JSON object with the structure above. Do not include explana
 }
 export async function POST(req) {
   try {
-    if (!process.env.GOOGLE_GENAI_API_KEY) {
-        throw new Error("GOOGLE_GENAI_API_KEY is not configured");
+    if (!process.env.OPENROUTER_API_KEY) {
+        throw new Error("OPENROUTER_API_KEY is not configured");
     }
 
     const body = await req.json(); // Parse the request body
@@ -57,23 +58,27 @@ export async function POST(req) {
       ? JSON.stringify(body.conversation) 
       : body.conversation;  
     const finalprompt = prompt.replace("{{conversation}}", conversationString);
-    console.log("Final Prompt:", finalprompt);
+    // Final Prompt prepared
     
-    // Direct REST API call to Google Gemini
-    const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${process.env.GOOGLE_GENAI_API_KEY}`,
-        {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: finalprompt }]
-                }]
-            })
-        }
-    );
+    // Call OpenRouter REST API
+    const response = await fetch(`${API_CONFIG.OPENROUTER.BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: API_CONFIG.OPENROUTER.DEFAULT_MODEL,
+        messages: [
+          {
+            role: "user",
+            content: finalprompt
+          }
+        ],
+        temperature: API_CONFIG.OPENROUTER.TEMPERATURE,
+        max_tokens: API_CONFIG.GEMINI.MAX_TOKENS
+      })
+    });
     
     if (!response.ok) {
         const errorData = await response.json();
@@ -81,22 +86,24 @@ export async function POST(req) {
     }
     
     const data = await response.json();
-    let cleanedContent = data.candidates[0].content.parts[0].text;
+    let cleanedContent = data.choices[0].message.content;
     
+    // Clean the response content
     cleanedContent = cleanedContent
       .replace(/```json\s*/g, "")
       .replace(/```\s*$/g, "")
       .replace(/```/g, "");
+    
     try {
       const parsedJson = JSON.parse(cleanedContent);
       return NextResponse.json(parsedJson);
     } catch (e) {
-      console.log("Failed to parse as JSON:", e);
-      return NextResponse.json({ cleanedContent });
+      // Failed to parse JSON response
+      return NextResponse.json({ error: "Invalid AI response format", cleanedContent }, { status: 500 });
     }
 
   } catch (error) {
-    console.error("Error during AI feedback generation:", error);
+    // Error during AI feedback generation
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 

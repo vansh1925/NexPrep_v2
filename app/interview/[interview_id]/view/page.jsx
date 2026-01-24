@@ -59,7 +59,7 @@ function ViewInterview() {
             : interviewData.interview_questions;
           setQuestions(parsedQuestions || []);
         } catch (parseError) {
-          console.error('Error parsing questions:', parseError);
+          // Error parsing questions
           setQuestions([]);
         }
       }
@@ -78,12 +78,12 @@ function ViewInterview() {
             : feedbackData.interview_review;
           setFeedback(parsedFeedback);
         } catch (parseError) {
-          console.error('Error parsing feedback:', parseError);
+          // Error parsing feedback
         }
       }
 
     } catch (err) {
-      console.error('Error:', err);
+      // Error occurred
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);

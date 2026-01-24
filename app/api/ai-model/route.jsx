@@ -1,11 +1,12 @@
 
 import { NextResponse } from "next/server";
+import { API_CONFIG, ERROR_MESSAGES } from '@/lib/constants';
 
 export async function POST(req) {
     try {
         // Check for API key
-        if (!process.env.GOOGLE_GENAI_API_KEY) {
-            throw new Error("GOOGLE_GENAI_API_KEY is not configured");
+        if (!process.env.OPENROUTER_API_KEY) {
+            throw new Error("OPENROUTER_API_KEY is not configured");
         }
 
         // Parse the form data from the request
@@ -21,21 +22,25 @@ export async function POST(req) {
         
         while (attempts < maxAttempts) {
             try {
-                // Direct REST API call to Google Gemini
-                const response = await fetch(
-                    `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${process.env.GOOGLE_GENAI_API_KEY}`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            contents: [{
-                                parts: [{ text: prompt }]
-                            }]
-                        })
-                    }
-                );
+                // Call OpenRouter REST API
+                const response = await fetch(`${API_CONFIG.OPENROUTER.BASE_URL}/chat/completions`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        model: API_CONFIG.OPENROUTER.DEFAULT_MODEL,
+                        messages: [
+                            {
+                                role: "user",
+                                content: prompt
+                            }
+                        ],
+                        temperature: API_CONFIG.OPENROUTER.TEMPERATURE,
+                        max_tokens: API_CONFIG.OPENROUTER.MAX_TOKENS
+                    })
+                });
                 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -43,14 +48,14 @@ export async function POST(req) {
                 }
                 
                 const data = await response.json();
-                responseText = data.candidates[0].content.parts[0].text;
+                responseText = data.choices[0].message.content;
                 break; // Success, exit retry loop
             } catch (error) {
                 attempts++;
                 if (error.status === 429 && attempts < maxAttempts) {
                     // Rate limit hit, wait and retry
                     const waitTime = Math.pow(2, attempts) * 1000; // Exponential backoff
-                    console.log(`Rate limit hit, retrying in ${waitTime}ms (attempt ${attempts}/${maxAttempts})`);
+                    // Rate limit hit, retrying
                     await new Promise(resolve => setTimeout(resolve, waitTime));
                 } else {
                     throw error; // Re-throw if not rate limit or max attempts reached
@@ -74,7 +79,7 @@ export async function POST(req) {
             questionsData = JSON.parse(cleanText);
             
         } catch (initialError) {
-            console.log("Initial parse failed:", initialError);
+            // Initial parse failed
             
             // If that fails, try to extract just the array part
             const jsonMatch = responseText.match(/\[[\s\S]*\]/);
@@ -101,16 +106,14 @@ export async function POST(req) {
             questions: questionsData,
             rawResponse: responseText, // Include raw response for debugging
             metadata: {
-                model: "gemini-pro",
+                model: "tngtech/deepseek-r1t2-chimera:free",
                 jobPosition: formData.jobPosition,
                 difficultyLevel: formData.difficultyLevel
             }
         });
         
     } catch (error) {
-        console.error("Error generating interview questions:", error);
-        console.error("Error details:", error.stack);
-        console.error("API Key present:", !!process.env.GOOGLE_GENAI_API_KEY);
+        // Error generating interview questions
         
         // Provide user-friendly error messages
         let errorMessage = error.message;

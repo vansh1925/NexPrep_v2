@@ -25,7 +25,7 @@ function Feedback() {
         .limit(1);
 
       if (error) {
-        console.error('Supabase error:', error);
+        // Supabase error occurred
         if (error.code === 'PGRST116') {
           setError('Multiple feedback entries found. Please contact support.');
         } else {
@@ -51,7 +51,7 @@ function Feedback() {
         setError('No feedback data found');
       }
     } catch (err) {
-      console.error('Error fetching feedback:', err);
+      // Error fetching feedback
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);

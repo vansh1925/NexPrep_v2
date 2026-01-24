@@ -21,7 +21,7 @@ function SignOut() {
         const { error } = await supabase.auth.signOut()
         
         if (error) {
-          console.error('Error signing out:', error.message)
+          // Error signing out
           setError(error.message)
         } else {
           setSignedOut(true)
@@ -31,7 +31,7 @@ function SignOut() {
           }, 2000)
         }
       } catch (err) {
-        console.error('Unexpected error during sign out:', err)
+        // Unexpected error during sign out
         setError('An unexpected error occurred')
       } finally {
         setLoading(false)

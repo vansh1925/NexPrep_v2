@@ -9,7 +9,7 @@ function Provider({ children }) {
   const router = useRouter();
 
   useEffect(() => {
-    console.log('Provider mounted');
+    // Provider mounted
     handleAuthAndUser();
   }, []);
 
@@ -17,12 +17,12 @@ function Provider({ children }) {
     try {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError || !authData?.user) {
-        console.log("User not authenticated");
+        // User not authenticated
         return;
       }
 
       const userEmail = authData.user.email;
-      console.log("Authenticated user:", userEmail);
+      // Authenticated user found
 
       const { data: existingUser, error: fetchError } = await supabase
         .from('Users')
@@ -31,12 +31,12 @@ function Provider({ children }) {
         .single(); // grabs one row, not an array
 
       if (fetchError && fetchError.code !== "PGRST116") {
-        console.error("Error checking user:", fetchError.message);
+        // Error checking user
         return;
       }
 
       if (!existingUser) {
-        console.log("User not found, creating new user");
+        // User not found, creating new user
         const { data: insertedUser, error: insertError } = await supabase
           .from('Users')
           .insert([
@@ -51,7 +51,7 @@ function Provider({ children }) {
           .single(); // fetch inserted row
 
         if (insertError) {
-          console.error("Error creating user:", insertError.message);
+          // Error creating user
           return;
         }
 
@@ -64,7 +64,7 @@ function Provider({ children }) {
       router.push('/dashboard');
 
     } catch (err) {
-      console.error("Unexpected error:", err);
+      // Unexpected error occurred
     }
   };
 

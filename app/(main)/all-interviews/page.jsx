@@ -68,7 +68,7 @@ function AllInterviews() {
                 ? JSON.parse(feedbackData.interview_review)
                 : feedbackData.interview_review;
             } catch (parseError) {
-              console.error('Error parsing feedback:', parseError);
+              // Error parsing feedback
             }
           }
 
@@ -82,7 +82,7 @@ function AllInterviews() {
 
       setInterviews(interviewsWithFeedback);
     } catch (err) {
-      console.error('Error fetching interviews:', err);
+      // Error fetching interviews
       setError('Failed to load interviews');
     } finally {
       setLoading(false);

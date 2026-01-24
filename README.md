@@ -97,7 +97,89 @@ nexprep_v2/
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 18+ (Download from [nodejs.org](https://nodejs.org/))
+- npm or yarn package manager
+- Git for version control
+
+### Environment Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd nexprep_v2
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env.local
+   
+   # Edit .env.local with your actual API keys and configuration
+   ```
+
+4. **Required API Keys & Services**
+   
+   **Supabase Setup:**
+   - Create account at [supabase.com](https://supabase.com)
+   - Create new project
+   - Go to Settings > API to get your URL and anon key
+   - Set up authentication and create required tables
+   
+   **Google Gemini API:**
+   - Visit [ai.google.dev](https://ai.google.dev)
+   - Create API key for Gemini
+   
+   **OpenRouter API:**
+   - Sign up at [openrouter.ai](https://openrouter.ai)
+   - Generate API key for AI model access
+   
+   **Vapi AI:**
+   - Create account at [vapi.ai](https://vapi.ai)
+   - Get your public API key
+
+5. **Database Setup**
+   ```bash
+   # Run database migrations (if you have them)
+   # Set up your Supabase tables according to your schema
+   ```
+
+6. **Start the development server**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+
+7. **Open your browser**
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+### Quick Start Guide
+
+1. **Sign up/Login** - Create your account through the auth system
+2. **Create Interview** - Go to Dashboard > Create Interview
+3. **Configure Settings** - Set job role, experience level, and difficulty  
+4. **Start Practice** - Begin your AI-powered mock interview
+5. **Get Feedback** - Receive detailed performance analysis
+
+### Troubleshooting
+
+**Common Issues:**
+- **Build errors**: Ensure all environment variables are set correctly
+- **API failures**: Verify your API keys are valid and have sufficient credits
+- **Audio issues**: Check browser permissions for microphone access
+- **Database errors**: Confirm Supabase connection and table structure
+
+**Getting Help:**
+- Check the console for error messages
+- Verify all environment variables in `.env.local`
+- Ensure your Supabase project is properly configured
 - npm, yarn, pnpm, or bun
 - Supabase account
 - Vapi AI account (for voice features)

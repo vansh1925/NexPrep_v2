@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';     
 import { Clock, Mic, MicOff, PhoneOff, Volume2, VolumeX, MessageSquare } from 'lucide-react';
 import Image from 'next/image';
@@ -7,14 +7,14 @@ import { InterviewDetailsContext } from '@/context/InterviewDetails.context';
 import { useUser } from '@/app/provider';
 import Vapi from '@vapi-ai/web';
 import { supabase } from '@/services/supabaseClient';
-
-let vapiInstance = null;
+import { API_CONFIG, ERROR_MESSAGES } from '@/lib/constants';
 
 function Interview() {
   const { interview_id } = useParams();
   const router = useRouter();
   const [interviewData, setInterviewData] = useContext(InterviewDetailsContext);
   const user = useUser();
+  const vapiInstanceRef = useRef(null);
 
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -34,26 +34,52 @@ function Interview() {
       setLoading(false);
       
       // Initialize VAPI if it doesn't exist yet
-      if (!vapiInstance) {
+      if (!vapiInstanceRef.current) {
         try {
-          vapiInstance = new Vapi(process.env.NEXT_PUBLIC_VAPI_KEY);
+          // Check if VAPI key is available
+          const vapiKey = process.env.NEXT_PUBLIC_VAPI_KEY || process.env.VAPI_API_KEY;
           
-          // Set up basic event listeners
-          vapiInstance.on('call-start', () =>{
+          if (!vapiKey) {
+            setLoadError(true);
+            return;
+          }
+          
+          vapiInstanceRef.current = new Vapi(vapiKey);
+          
+          // Set up basic event listeners with error handling
+          vapiInstanceRef.current.on('call-start', () =>{
             setIsCallActive(true);
             setIsTimerActive(true);
           }); 
-          vapiInstance.on('call-end', () => {
+          
+          vapiInstanceRef.current.on('call-end', () => {
             setIsCallActive(false);
             setIsTimerActive(false);
           });
-          vapiInstance.on('error', (error) => console.error("VAPI error:", error));
+          
+          vapiInstanceRef.current.on('error', (error) => {
+            // Handle specific error types gracefully
+            if (error?.errorMsg === 'Meeting has ended' || error?.action === 'error') {
+              setIsCallActive(false);
+              setIsTimerActive(false);
+              return; // Don't treat this as a failure
+            }
+          });
+          
+          vapiInstanceRef.current.on('speech-start', () => {
+          });
+          
+          vapiInstanceRef.current.on('speech-end', () => {
+          });
+          
+          vapiInstanceRef.current.on('transcript', (transcript) => {
+          });
 
           
         }
         catch (error) {
-            console.error("Error initializing VAPI:", error);
-            setLoadError(true);
+            // Don't set loadError immediately - let user try to proceed
+            // setLoadError(true);
         }
       }
     } else {
@@ -70,11 +96,11 @@ function Interview() {
     
     // Clean up VAPI on component unmount
     return () => {
-      if (vapiInstance && isCallActive) {
+      if (vapiInstanceRef.current && isCallActive) {
         try {
-          vapiInstance.stop();
+          vapiInstanceRef.current.stop();
         } catch (e) {
-          console.error("Error stopping VAPI:", e);
+          // Error stopping VAPI
         }
       }
     };
@@ -110,64 +136,55 @@ function Interview() {
 
   // Simple function to start the VAPI call
   const startCall = () => {
-    if (!interviewData || !vapiInstance) {
+    if (!interviewData || !vapiInstanceRef.current) {
       return;
     }
     
     try {
+      // Simplified assistant configuration
       const assistantOptions = {
         name: "AI Interviewer",
-        firstMessage: `Hi ${userName || "there"}, ready for your interview?`,
+        firstMessage: `Hello! I'm your AI interviewer for the ${interviewData?.interviewData?.job_position || "Software Development"} position. Are you ready to begin?`,
         transcriber: {
           provider: "deepgram",
           model: "nova-2",
           language: "en-US",
         },
         voice: {
-          provider: "playht",
-          voiceId: "jennifer",
+          provider: "11labs", 
+          voiceId: "paula", // More stable voice option
         },
         model: {
           provider: "openai",
-          model: "gpt-4",
+          model: "gpt-3.5-turbo", // More stable model
+          temperature: 0.7,
           messages: [
             {
               role: "system",
-              content: `You are an AI voice assistant conducting interviews.
-Your job is to ask candidates provided interview questions, assess their responses,
-Begin the conversation with a friendly introduction, setting a relaxed yet professional tone. Example:
-"Hey there! Welcome to your ${interviewData?.interviewData?.job_position || "Software Development"} interview. Let's get started with a few questions!"
-Ask one question at a time and wait for the candidate's response before proceeding. Keep the questions clear and concise. Below Are the questions:
-${JSON.stringify(questions)}
-If the candidate struggles, offer hints or rephrase the question without giving away the answer. Example:
-"Need a hint? Think about how React tracks component updates!"
-Provide brief, encouraging feedback after each answer. Example:
-"Nice! That's a solid answer."
-"Hmm, not quite! Want to try again?"
-Keep the conversation natural and engaging—use casual phrases like "Alright, next up..." or "Let's tackle a tricky one!"
-After 5-7 questions, wrap up the interview smoothly by summarizing their performance. Example:
-"That was great! You handled some tough questions well. Keep sharpening your skills!"
-End on a positive note:
-"Thanks for chatting! Hope to see you crushing projects soon!"
-Key Guidelines:
-✅ Be friendly, engaging, and witty
-✅ Keep responses short and natural, like a real conversation
-✅ Adapt based on the candidate's confidence level
-✅ Ensure the interview remains focused on ${interviewData?.interviewData?.job_position || "Software Development"}`
+              content: `You are conducting a professional interview for a ${interviewData?.interviewData?.job_position || "Software Development"} position. 
+              
+Ask one question at a time from this list: ${questions.slice(0, 5).join(', ')} 
+              
+Keep responses brief and professional. After each answer, provide short feedback and move to the next question.
+              
+Wrap up after 5 questions with: "Thank you for your time. The interview is now complete."`
             }
           ]
         }
       };
       
-      // Start the call
-      vapiInstance.start(assistantOptions);
-      vapiInstance.on('message', (message) => {
+      // Start the call with error handling
+      vapiInstanceRef.current.start(assistantOptions);
+      
+      // Enhanced message handling
+      vapiInstanceRef.current.on('message', (message) => {
         if (message?.conversation) {
           setConversation(prev => [...prev, ...message.conversation]);
         }
       });
+      
     } catch (error) {
-      console.error("Error starting VAPI call:", error);
+      alert("Failed to start the interview call. Please try again.");
     }
   };
 
@@ -180,13 +197,12 @@ Key Guidelines:
   const confirmEndCall = async () => {
     setShowEndConfirmation(false);
     try {
-      if (vapiInstance) {
-        vapiInstance.stop();
+      if (vapiInstanceRef.current) {
+        vapiInstanceRef.current.stop();
       }
       await GenerateFeedback();
       router.push(`/interview/${interview_id}/feedback`);
     } catch (error) {
-      console.error("Error stopping VAPI call:", error);
       router.push(`/interview/${interview_id}/feedback`);
     }
   };
@@ -195,7 +211,7 @@ Key Guidelines:
     setShowEndConfirmation(false);
   };
   const GenerateFeedback = async () => {
-    if (!interviewData || !vapiInstance) {
+    if (!interviewData || !vapiInstanceRef.current) {
       return;
     }
     
@@ -208,7 +224,7 @@ Key Guidelines:
         .limit(1);
         
       if (checkError && checkError.code !== 'PGRST116') {
-        console.error("Error checking existing feedback:", checkError);
+        // Error checking existing feedback
       }
       
       if (existingFeedback && existingFeedback.length > 0) {
@@ -242,7 +258,7 @@ Key Guidelines:
           ]);
           
         if (insertError) {
-          console.error("Error inserting default feedback:", insertError);
+          // Error inserting default feedback
         }
         return;
       }
@@ -277,12 +293,10 @@ Key Guidelines:
         ]);
         
       if (insertError) {
-        console.error("Error inserting feedback:", insertError);
         throw new Error(`Database insert failed: ${insertError.message}`);
       }
         
     } catch (error) {
-      console.error("Error generating feedback:", error);
       
       // Create a fallback feedback entry so the feedback page doesn't crash
       try {
@@ -322,10 +336,10 @@ Key Guidelines:
           ]);
           
         if (fallbackError) {
-          console.error("Error inserting fallback feedback:", fallbackError);
+          // Error inserting fallback feedback
         }
       } catch (fallbackError) {
-        console.error("Failed to insert fallback feedback:", fallbackError);
+        // Failed to insert fallback feedback
       }
     }
   };
@@ -333,16 +347,31 @@ Key Guidelines:
   // Simple function to toggle microphone
   const handleMicToggle = () => {
     try {
-      if (vapiInstance) {
-        if (isMuted) {
-          vapiInstance.mic.unmute();
+      if (vapiInstanceRef.current && isCallActive) {
+        // Check if mic methods are available
+        if (vapiInstanceRef.current.mic) {
+          if (isMuted) {
+            vapiInstanceRef.current.mic.unmute();
+          } else {
+            vapiInstanceRef.current.mic.mute();
+          }
+          setIsMuted(!isMuted);
         } else {
-          vapiInstance.mic.mute();
+          // Try alternative method if available
+          if (vapiInstanceRef.current.setMuted) {
+            vapiInstanceRef.current.setMuted(!isMuted);
+            setIsMuted(!isMuted);
+          } else {
+            // No microphone control methods available
+          }
         }
-        setIsMuted(!isMuted);
+      } else if (!isCallActive) {
+        // Cannot toggle microphone - call is not active
+      } else {
+        // VAPI instance not available
       }
     } catch (error) {
-      console.error("Error toggling microphone:", error);
+      // Error toggling microphone
     }
   };
 
@@ -546,7 +575,7 @@ Key Guidelines:
             </button>
             
             <button 
-              onClick={() => setIsSpeakerOff(!isSpeakerOff)}
+              onClick={handleSpeakerToggle}
               className={`p-4 rounded-full ${isSpeakerOff ? 'bg-red-500' : 'bg-gray-600 hover:bg-gray-500'}`}
               disabled={!isCallActive}
             >

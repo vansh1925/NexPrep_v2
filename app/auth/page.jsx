@@ -13,9 +13,9 @@ function Login() {
       
     })
     if (error) {
-      console.error('Error signing in with Google:', error.message);
+      // Error signing in with Google
     } else {
-      console.log('Sign in successful');
+      // Sign in successful
     }
   }
   return (
