@@ -59,11 +59,34 @@ function Interview() {
           
           vapiInstanceRef.current.on('error', (error) => {
             // Handle specific error types gracefully
-            if (error?.errorMsg === 'Meeting has ended' || error?.action === 'error') {
+            if (error?.errorMsg?.includes('Meeting has ended') || 
+                error?.message?.includes('Meeting has ended') ||
+                error?.action === 'error' ||
+                error?.type === 'call-end' ||
+                error?.error?.includes('ended')) {
               setIsCallActive(false);
               setIsTimerActive(false);
+              // Automatically redirect to feedback after call ends
+              setTimeout(() => {
+                GenerateFeedback().then(() => {
+                  router.push(`/interview/${interview_id}/feedback`);
+                }).catch(() => {
+                  router.push(`/interview/${interview_id}/feedback`);
+                });
+              }, 1000);
               return; // Don't treat this as a failure
             }
+          });
+          
+          // Add additional event handlers for call state management
+          vapiInstanceRef.current.on('call-disconnected', () => {
+            setIsCallActive(false);
+            setIsTimerActive(false);
+          });
+          
+          vapiInstanceRef.current.on('session-end', () => {
+            setIsCallActive(false);
+            setIsTimerActive(false);
           });
           
           vapiInstanceRef.current.on('speech-start', () => {
@@ -174,12 +197,27 @@ Wrap up after 5 questions with: "Thank you for your time. The interview is now c
       };
       
       // Start the call with error handling
-      vapiInstanceRef.current.start(assistantOptions);
+      vapiInstanceRef.current.start(assistantOptions)
+        .then(() => {
+          // Call started successfully
+        })
+        .catch((error) => {
+          if (error?.message?.includes('Meeting has ended') || 
+              error?.errorMsg?.includes('Meeting has ended')) {
+            // This is expected - don't show error
+            return;
+          }
+          alert("Failed to start the interview call. Please check your microphone and try again.");
+        });
       
       // Enhanced message handling
       vapiInstanceRef.current.on('message', (message) => {
-        if (message?.conversation) {
-          setConversation(prev => [...prev, ...message.conversation]);
+        try {
+          if (message?.conversation) {
+            setConversation(prev => [...prev, ...message.conversation]);
+          }
+        } catch (msgError) {
+          // Error handling message - continue silently
         }
       });
       
@@ -197,12 +235,21 @@ Wrap up after 5 questions with: "Thank you for your time. The interview is now c
   const confirmEndCall = async () => {
     setShowEndConfirmation(false);
     try {
-      if (vapiInstanceRef.current) {
-        vapiInstanceRef.current.stop();
+      if (vapiInstanceRef.current && isCallActive) {
+        // Attempt to stop the call gracefully
+        try {
+          vapiInstanceRef.current.stop();
+        } catch (stopError) {
+          // If stopping fails, that's okay - call might already be ended
+        }
       }
+      setIsCallActive(false);
+      setIsTimerActive(false);
+      
       await GenerateFeedback();
       router.push(`/interview/${interview_id}/feedback`);
     } catch (error) {
+      // Even if feedback generation fails, redirect to feedback page
       router.push(`/interview/${interview_id}/feedback`);
     }
   };
